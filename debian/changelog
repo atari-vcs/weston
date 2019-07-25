@@ -1,3 +1,11 @@
+weston (9.0.0-4~exp1ata1) vcs; urgency=medium
+
+  [ Sjoerd Simons ]
+  * Add atari specific gitlab-yml.ci
+  * Use ci-package-builder yml from atari/vcs branch
+
+ -- Sjoerd Simons <sjoerd.simons@collabora.co.uk>  Sun, 08 Dec 2019 10:02:22 +0100
+
 weston (9.0.0-4) unstable; urgency=high
 
   * debian/rules: make tests non fatal
