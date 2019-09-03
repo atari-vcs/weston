@@ -33,8 +33,9 @@
 #include <string.h>
 #include <assert.h>
 #include <limits.h>
+#include <errno.h>
 
-#include "compositor.h"
+#include <libweston/libweston.h>
 #include "compositor/weston.h"
 #include "weston-test-server-protocol.h"
 #include "ivi-test.h"
@@ -181,7 +182,7 @@ test_client_sigchld(struct weston_process *process, int status)
 		container_of(process, struct test_launcher, process);
 	struct weston_compositor *c = launcher->compositor;
 
-	/* Chain up from weston-test-runner's exit code so that automake
+	/* Chain up from weston-test-runner's exit code so that ninja
 	 * knows the exit status and can report e.g. skipped tests. */
 	if (WIFEXITED(status))
 		weston_compositor_exit_with_code(c, WEXITSTATUS(status));
@@ -198,7 +199,8 @@ idle_launch_client(void *data)
 
 	pid = fork();
 	if (pid == -1) {
-		weston_log("fatal: failed to fork '%s': %m\n", launcher->exe);
+		weston_log("fatal: failed to fork '%s': %s\n", launcher->exe,
+			   strerror(errno));
 		weston_compositor_exit_with_code(launcher->compositor,
 						 EXIT_FAILURE);
 		return;
@@ -208,8 +210,8 @@ idle_launch_client(void *data)
 		sigfillset(&allsigs);
 		sigprocmask(SIG_UNBLOCK, &allsigs, NULL);
 		execl(launcher->exe, launcher->exe, NULL);
-		weston_log("compositor: executing '%s' failed: %m\n",
-			   launcher->exe);
+		weston_log("compositor: executing '%s' failed: %s\n",
+			   launcher->exe, strerror(errno));
 		_exit(EXIT_FAILURE);
 	}
 
@@ -297,7 +299,7 @@ runner_assert_fail(const char *cond, const char *file, int line,
  * This module is specially written to execute tests that target the
  * ivi_layout API.
  *
- * This module is listed in TESTS in Makefile.am. weston-tests-env handles
+ * This module is listed in meson.build which handles
  * this module specially by loading it in ivi-shell.
  *
  * Once Weston init completes, this module launches one test program:

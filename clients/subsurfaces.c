@@ -32,6 +32,7 @@
 #include <cairo.h>
 #include <math.h>
 #include <assert.h>
+#include <errno.h>
 
 #include <linux/input.h>
 #include <wayland-client.h>
@@ -43,7 +44,7 @@
 
 #include "shared/helpers.h"
 #include "shared/xalloc.h"
-#include "shared/zalloc.h"
+#include <libweston/zalloc.h>
 #include "window.h"
 
 #if 0
@@ -788,7 +789,8 @@ main(int argc, char *argv[])
 
 	display = display_create(&argc, argv);
 	if (display == NULL) {
-		fprintf(stderr, "failed to create display: %m\n");
+		fprintf(stderr, "failed to create display: %s\n",
+			strerror(errno));
 		return -1;
 	}
 
