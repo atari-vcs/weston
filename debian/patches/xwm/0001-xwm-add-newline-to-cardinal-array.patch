@@ -1,0 +1,25 @@
+From: Pekka Paalanen <pekka.paalanen@collabora.com>
+Date: Tue, 3 Dec 2019 15:40:05 +0200
+Subject: xwm: add newline to cardinal array
+
+Add the missing newline to printing a property that is of type cardinal array.
+Fixes messed up debug scope output.
+
+Signed-off-by: Pekka Paalanen <pekka.paalanen@collabora.com>
+(cherry picked from commit 6a93e4559c29a59e5a58f2920f213ac70598bfe6)
+---
+ xwayland/window-manager.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/xwayland/window-manager.c b/xwayland/window-manager.c
+index 61460af..79348c0 100644
+--- a/xwayland/window-manager.c
++++ b/xwayland/window-manager.c
+@@ -466,6 +466,7 @@ dump_property(FILE *fp, struct weston_wm *wm,
+ 		fprintf(fp, "\n");
+ 	} else if (reply->type == XCB_ATOM_CARDINAL) {
+ 		dump_cardinal_array(fp, reply);
++		fprintf(fp, "\n");
+ 	} else if (reply->type == XCB_ATOM_WINDOW && reply->format == 32) {
+ 		window_value = xcb_get_property_value(reply);
+ 		fprintf(fp, "win %u\n", *window_value);

@@ -1,0 +1,9 @@
+xwm/0001-xwm-add-newline-to-cardinal-array.patch
+xwm/0002-xwm-debug-_XWAYLAND_ALLOW_COMMITS.patch
+xwm/0003-xwm-fix-initially-fullscreen-windows.patch
+xwm/0004-xwm-debug-what-kind-decoration-is-drawn.patch
+xwm/0005-xwm-debug-_NET_WM_STATE-client-message.patch
+xwm/0006-xwm-debug-ConfigureWindow.patch
+xwm/0007-xwm-remove-configure_source-on-dispatch.patch
+xwm/0008-xwm-remove-configure_source-on-destroy.patch
+xwm/0009-xwm-do-not-configure-frame-window-None.patch

@@ -1,0 +1,27 @@
+From: Pekka Paalanen <pekka.paalanen@collabora.com>
+Date: Thu, 5 Dec 2019 16:42:48 +0200
+Subject: xwm: remove configure_source on destroy
+
+It would lead to use-after-free if there was a pending idle callback to
+weston_wm_window_configure() when the weston_wm_window gets destroyed. Make
+sure the callback will not fire.
+
+Signed-off-by: Pekka Paalanen <pekka.paalanen@collabora.com>
+(cherry picked from commit b1e45914dad777c65c78cd223c0f5449ed411a32)
+---
+ xwayland/window-manager.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/xwayland/window-manager.c b/xwayland/window-manager.c
+index c6ff75d..16d572e 100644
+--- a/xwayland/window-manager.c
++++ b/xwayland/window-manager.c
+@@ -1508,6 +1508,8 @@ weston_wm_window_destroy(struct weston_wm_window *window)
+ 
+ 	weston_output_weak_ref_clear(&window->legacy_fullscreen_output);
+ 
++	if (window->configure_source)
++		wl_event_source_remove(window->configure_source);
+ 	if (window->repaint_source)
+ 		wl_event_source_remove(window->repaint_source);
+ 	if (window->cairo_surface)

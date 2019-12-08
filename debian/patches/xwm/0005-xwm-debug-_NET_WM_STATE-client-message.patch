@@ -1,0 +1,52 @@
+From: Pekka Paalanen <pekka.paalanen@collabora.com>
+Date: Thu, 5 Dec 2019 14:15:37 +0200
+Subject: xwm: debug _NET_WM_STATE client message
+
+The generic message does not interpret the atoms, so this makes it explicit on
+what the client is changing. Helps keeping track of what is happening.
+
+Signed-off-by: Pekka Paalanen <pekka.paalanen@collabora.com>
+(cherry picked from commit 562a386f79792fef31f4d7f517235386c44cc705)
+---
+ xwayland/window-manager.c | 21 +++++++++++++++++++++
+ 1 file changed, 21 insertions(+)
+
+diff --git a/xwayland/window-manager.c b/xwayland/window-manager.c
+index 2e1462c..2ef82a2 100644
+--- a/xwayland/window-manager.c
++++ b/xwayland/window-manager.c
+@@ -1694,6 +1694,21 @@ weston_wm_window_is_maximized(struct weston_wm_window *window)
+ 	return window->maximized_horz && window->maximized_vert;
+ }
+ 
++static const char *
++net_wm_state_action_to_string(uint32_t action)
++{
++	switch (action) {
++	case _NET_WM_STATE_REMOVE:
++		return "remove";
++	case _NET_WM_STATE_ADD:
++		return "add";
++	case _NET_WM_STATE_TOGGLE:
++		return "toggle";
++	default:
++		return "<unknown>";
++	}
++}
++
+ static void
+ weston_wm_window_handle_state(struct weston_wm_window *window,
+ 			      xcb_client_message_event_t *client_message)
+@@ -1708,6 +1723,12 @@ weston_wm_window_handle_state(struct weston_wm_window *window,
+ 	property1 = client_message->data.data32[1];
+ 	property2 = client_message->data.data32[2];
+ 
++	wm_printf(wm, "XWM: client message _NET_WM_STATE window %d: %s %s %s\n",
++		  window->id,
++		  net_wm_state_action_to_string(action),
++		  get_atom_name(wm->conn, property1),
++		  property2 ? get_atom_name(wm->conn, property2) : "");
++
+ 	if ((property1 == wm->atom.net_wm_state_fullscreen ||
+ 	     property2 == wm->atom.net_wm_state_fullscreen) &&
+ 	    update_state(action, &window->fullscreen)) {

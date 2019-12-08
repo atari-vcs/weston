@@ -1,0 +1,46 @@
+From: Pekka Paalanen <pekka.paalanen@collabora.com>
+Date: Wed, 4 Dec 2019 12:47:12 +0200
+Subject: xwm: fix initially-fullscreen windows
+
+It looks like commit ad0da4596d6315b18e888af75eee0a9bad1ff44d introduced a bug
+for X11 windows that are initially fullscreen by adding code to the end of
+xserver_map_shell_surface() while ignoring the 'return' that this patch
+removes. That may have caused some annoying window state issues, but the
+problem became more pronounced with 7ace831ca6205ea288e49fdbd6b63f53e73fae59
+when used with an Xwayland version that honours _XWAYLAND_ALLOW_COMMITS.
+
+In the latter case, there is a possiblity the window will never show up, as XWM
+forgets to set allow_commits=true. However, the window may sometimes actually
+show up due to an oversight in Xwayland: the Present code may be flipping the
+window buffers and not checking _XWAYLAND_ALLOW_COMMITS if it is supposed
+commit at all.
+
+Since then, f568968f8a30eab6bfd8a15518014deb8f6c81d5 added more places where
+allow_commits is set to true, masking the window-does-not-show-up issue. Window
+pending state likely still remained an issue.
+
+This patch properly fixes the "window never appears" issue by making sure
+allow_commit=true is set. At the same time, it ensures the pending state
+functions are called at the end of xserver_map_shell_surface(), which may fix
+some window state issues like misplaced decorations and/or position of
+initially-fullscreen windows. Unfortunately, it certainly does not fix all such
+state problems.
+
+Signed-off-by: Pekka Paalanen <pekka.paalanen@collabora.com>
+(cherry picked from commit 9a44bd0a90aeadac7ebd504f7d3b02839e0b277b)
+---
+ xwayland/window-manager.c | 1 -
+ 1 file changed, 1 deletion(-)
+
+diff --git a/xwayland/window-manager.c b/xwayland/window-manager.c
+index 7d9b614..37d43f8 100644
+--- a/xwayland/window-manager.c
++++ b/xwayland/window-manager.c
+@@ -2871,7 +2871,6 @@ xserver_map_shell_surface(struct weston_wm_window *window,
+ 		window->saved_height = window->height;
+ 		xwayland_interface->set_fullscreen(window->shsurf,
+ 						   window->legacy_fullscreen_output.output);
+-		return;
+ 	} else if (window->override_redirect) {
+ 		xwayland_interface->set_xwayland(window->shsurf,
+ 						 window->x, window->y);

@@ -1,6 +1,7 @@
 weston (7.0.0-1~exp1ata2) vcs; urgency=medium
 
   * debian/control: Disable rdp backend support
+  * debian/patches/xwm: Take snapshots of pekka's xwm fix patches
 
  -- Sjoerd Simons <sjoerd.simons@collabora.co.uk>  Sun, 08 Dec 2019 10:36:13 +0100
 

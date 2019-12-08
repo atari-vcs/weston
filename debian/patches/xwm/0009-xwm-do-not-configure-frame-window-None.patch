@@ -1,0 +1,97 @@
+From: Pekka Paalanen <pekka.paalanen@collabora.com>
+Date: Thu, 5 Dec 2019 16:47:16 +0200
+Subject: xwm: do not configure frame window None
+
+Spotted this in debug log:
+[xwm-wm-x11] XWM: configure window 4194324: x=32 y=32 width=1920 height=1080 border_width=0 stack_mode=0
+[xwm-wm-x11] XWM: configure window 0: width=1984 height=1144
+
+Trying to configure window 0 makes no sense. So do not try.
+
+To avoid patching two different places with the same thing, refactor the code
+into a common helper.
+
+Signed-off-by: Pekka Paalanen <pekka.paalanen@collabora.com>
+(cherry picked from commit bedcca67752f63e4c162a5596550d6aafa855768)
+---
+ xwayland/window-manager.c | 39 ++++++++++++++++++++++-----------------
+ 1 file changed, 22 insertions(+), 17 deletions(-)
+
+diff --git a/xwayland/window-manager.c b/xwayland/window-manager.c
+index 16d572e..0b67508 100644
+--- a/xwayland/window-manager.c
++++ b/xwayland/window-manager.c
+@@ -754,6 +754,23 @@ weston_wm_configure_window(struct weston_wm *wm, xcb_window_t window_id,
+ 	free(buf);
+ }
+ 
++static void
++weston_wm_window_configure_frame(struct weston_wm_window *window)
++{
++	uint16_t mask;
++	uint32_t values[2];
++	int width, height;
++
++	if (!window->frame_id)
++		return;
++
++	weston_wm_window_get_frame_size(window, &width, &height);
++	values[0] = width;
++	values[1] = height;
++	mask = XCB_CONFIG_WINDOW_WIDTH | XCB_CONFIG_WINDOW_HEIGHT;
++	weston_wm_configure_window(window->wm, window->frame_id, mask, values);
++}
++
+ static void
+ weston_wm_handle_configure_request(struct weston_wm *wm, xcb_generic_event_t *event)
+ {
+@@ -761,7 +778,8 @@ weston_wm_handle_configure_request(struct weston_wm *wm, xcb_generic_event_t *ev
+ 		(xcb_configure_request_event_t *) event;
+ 	struct weston_wm_window *window;
+ 	uint32_t mask, values[16];
+-	int x, y, width, height, i = 0;
++	int x, y;
++	int i = 0;
+ 
+ 	wm_printf(wm, "XCB_CONFIGURE_REQUEST (window %d) %d,%d @ %dx%d\n",
+ 		  configure_request->window,
+@@ -803,13 +821,7 @@ weston_wm_handle_configure_request(struct weston_wm *wm, xcb_generic_event_t *ev
+ 	}
+ 
+ 	weston_wm_configure_window(wm, window->id, mask, values);
+-
+-	weston_wm_window_get_frame_size(window, &width, &height);
+-	values[0] = width;
+-	values[1] = height;
+-	mask = XCB_CONFIG_WINDOW_WIDTH | XCB_CONFIG_WINDOW_HEIGHT;
+-	weston_wm_configure_window(wm, window->frame_id, mask, values);
+-
++	weston_wm_window_configure_frame(window);
+ 	weston_wm_window_schedule_repaint(window);
+ }
+ 
+@@ -2702,7 +2714,7 @@ weston_wm_window_configure(void *data)
+ 	struct weston_wm_window *window = data;
+ 	struct weston_wm *wm = window->wm;
+ 	uint32_t values[4];
+-	int x, y, width, height;
++	int x, y;
+ 
+ 	if (window->configure_source) {
+ 		wl_event_source_remove(window->configure_source);
+@@ -2721,14 +2733,7 @@ weston_wm_window_configure(void *data)
+ 				   XCB_CONFIG_WINDOW_HEIGHT,
+ 				   values);
+ 
+-	weston_wm_window_get_frame_size(window, &width, &height);
+-	values[0] = width;
+-	values[1] = height;
+-	weston_wm_configure_window(wm, window->frame_id,
+-				   XCB_CONFIG_WINDOW_WIDTH |
+-				   XCB_CONFIG_WINDOW_HEIGHT,
+-				   values);
+-
++	weston_wm_window_configure_frame(window);
+ 	weston_wm_window_schedule_repaint(window);
+ }
+ 

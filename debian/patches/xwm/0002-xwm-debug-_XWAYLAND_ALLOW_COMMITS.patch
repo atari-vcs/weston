@@ -1,0 +1,27 @@
+From: Pekka Paalanen <pekka.paalanen@collabora.com>
+Date: Tue, 3 Dec 2019 16:23:45 +0200
+Subject: xwm: debug _XWAYLAND_ALLOW_COMMITS
+
+Print the changes to the debug scope, helping to figure out why Xwayland is or
+is not committing.
+
+Signed-off-by: Pekka Paalanen <pekka.paalanen@collabora.com>
+(cherry picked from commit 3505a3261ec88acf93273f113089d82c875248b4)
+---
+ xwayland/window-manager.c | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/xwayland/window-manager.c b/xwayland/window-manager.c
+index 79348c0..7d9b614 100644
+--- a/xwayland/window-manager.c
++++ b/xwayland/window-manager.c
+@@ -950,6 +950,9 @@ weston_wm_window_set_allow_commits(struct weston_wm_window *window, bool allow)
+ 
+ 	assert(window->frame_id != XCB_WINDOW_NONE);
+ 
++	wm_printf(wm, "XWM: window %d set _XWAYLAND_ALLOW_COMMITS = %s\n",
++		  window->id, allow ? "true" : "false");
++
+ 	property[0] = allow ? 1 : 0;
+ 
+ 	xcb_change_property(wm->conn,

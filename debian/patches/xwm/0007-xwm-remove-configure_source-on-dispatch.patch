@@ -1,0 +1,46 @@
+From: Pekka Paalanen <pekka.paalanen@collabora.com>
+Date: Thu, 5 Dec 2019 16:36:17 +0200
+Subject: xwm: remove configure_source on dispatch
+
+This function is called also directly from weston_wm_window_set_toplevel(). If
+configure_source is set at that point, simply resetting the pointer will "leak"
+the source until it fires and calls this function again.
+
+Let's keep the variable up-to-date by removing the source when called,
+dispatched or not. This removes the second call. I only hope it doesn't cause
+issues. This is also necessary if we intend to remove the source on window
+destruction too.
+
+Found by inspection.
+
+Signed-off-by: Pekka Paalanen <pekka.paalanen@collabora.com>
+(cherry picked from commit 54a456b8860a38b6f1b7b587c7a5c2a697e588fe)
+---
+ xwayland/window-manager.c | 7 +++++--
+ 1 file changed, 5 insertions(+), 2 deletions(-)
+
+diff --git a/xwayland/window-manager.c b/xwayland/window-manager.c
+index 2972862..c6ff75d 100644
+--- a/xwayland/window-manager.c
++++ b/xwayland/window-manager.c
+@@ -2702,6 +2702,11 @@ weston_wm_window_configure(void *data)
+ 	uint32_t values[4];
+ 	int x, y, width, height;
+ 
++	if (window->configure_source) {
++		wl_event_source_remove(window->configure_source);
++		window->configure_source = NULL;
++	}
++
+ 	weston_wm_window_get_child_position(window, &x, &y);
+ 	values[0] = x;
+ 	values[1] = y;
+@@ -2722,8 +2727,6 @@ weston_wm_window_configure(void *data)
+ 				   XCB_CONFIG_WINDOW_HEIGHT,
+ 				   values);
+ 
+-	window->configure_source = NULL;
+-
+ 	weston_wm_window_schedule_repaint(window);
+ }
+ 

@@ -1,0 +1,52 @@
+From: Pekka Paalanen <pekka.paalanen@collabora.com>
+Date: Wed, 4 Dec 2019 15:00:43 +0200
+Subject: xwm: debug what kind decoration is drawn
+
+Knowing the kind of decoration drawn will help track down issues with
+unexpected decorations.
+
+Signed-off-by: Pekka Paalanen <pekka.paalanen@collabora.com>
+(cherry picked from commit 0dca03e781090268557abc338bdd06a1411eb884)
+---
+ xwayland/window-manager.c | 9 +++++++--
+ 1 file changed, 7 insertions(+), 2 deletions(-)
+
+diff --git a/xwayland/window-manager.c b/xwayland/window-manager.c
+index 37d43f8..2e1462c 100644
+--- a/xwayland/window-manager.c
++++ b/xwayland/window-manager.c
+@@ -1223,8 +1223,7 @@ weston_wm_window_draw_decoration(struct weston_wm_window *window)
+ {
+ 	cairo_t *cr;
+ 	int width, height;
+-
+-	wm_printf(window->wm, "XWM: draw decoration, win %d\n", window->id);
++	const char *how;
+ 
+ 	weston_wm_window_get_frame_size(window, &width, &height);
+ 
+@@ -1232,11 +1231,14 @@ weston_wm_window_draw_decoration(struct weston_wm_window *window)
+ 	cr = cairo_create(window->cairo_surface);
+ 
+ 	if (window->fullscreen) {
++		how = "fullscreen";
+ 		/* nothing */
+ 	} else if (window->decorate) {
++		how = "decorate";
+ 		frame_set_title(window->frame, window->name);
+ 		frame_repaint(window->frame, cr);
+ 	} else {
++		how = "shadow";
+ 		cairo_set_operator(cr, CAIRO_OPERATOR_SOURCE);
+ 		cairo_set_source_rgba(cr, 0, 0, 0, 0);
+ 		cairo_paint(cr);
+@@ -1245,6 +1247,9 @@ weston_wm_window_draw_decoration(struct weston_wm_window *window)
+ 			      2, 2, width + 8, height + 8, 64, 64);
+ 	}
+ 
++	wm_printf(window->wm, "XWM: draw decoration, win %d, %s\n",
++		  window->id, how);
++
+ 	cairo_destroy(cr);
+ 	cairo_surface_flush(window->cairo_surface);
+ 	xcb_flush(window->wm->conn);
