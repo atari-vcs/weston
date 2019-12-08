@@ -1,6 +1,6 @@
 weston (7.0.0-1~exp1ata2) vcs; urgency=medium
 
-  * debian/control: Disable rdp support
+  * debian/control: Disable rdp/screenshare support
 
  -- Sjoerd Simons <sjoerd.simons@collabora.co.uk>  Sun, 08 Dec 2019 10:36:13 +0100
 
