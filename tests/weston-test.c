@@ -31,16 +31,13 @@
 #include <signal.h>
 #include <unistd.h>
 #include <string.h>
+#include <errno.h>
 
-#include "compositor.h"
+#include <libweston/libweston.h>
+#include "backend.h"
+#include "libweston-internal.h"
 #include "compositor/weston.h"
 #include "weston-test-server-protocol.h"
-
-#ifdef ENABLE_EGL
-#include <EGL/egl.h>
-#include <EGL/eglext.h>
-#include "weston-egl-ext.h"
-#endif /* ENABLE_EGL */
 
 #include "shared/helpers.h"
 #include "shared/timespec-util.h"
@@ -70,7 +67,7 @@ test_client_sigchld(struct weston_process *process, int status)
 	struct weston_test *test =
 		container_of(process, struct weston_test, process);
 
-	/* Chain up from weston-test-runner's exit code so that automake
+	/* Chain up from weston-test-runner's exit code so that ninja
 	 * knows the exit status and can report e.g. skipped tests. */
 	if (WIFEXITED(status) && WEXITSTATUS(status) != 0)
 		exit(WEXITSTATUS(status));
@@ -78,7 +75,7 @@ test_client_sigchld(struct weston_process *process, int status)
 	/* In case the child aborted or segfaulted... */
 	assert(status == 0);
 
-	wl_display_terminate(test->compositor->wl_display);
+	weston_compositor_exit(test->compositor);
 }
 
 static void
@@ -655,7 +652,8 @@ idle_launch_client(void *data)
 		sigfillset(&allsigs);
 		sigprocmask(SIG_UNBLOCK, &allsigs, NULL);
 		execl(path, path, NULL);
-		weston_log("compositor: executing '%s' failed: %m\n", path);
+		weston_log("compositor: executing '%s' failed: %s\n", path,
+			   strerror(errno));
 		exit(EXIT_FAILURE);
 	}
 

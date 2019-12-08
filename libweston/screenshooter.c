@@ -32,11 +32,14 @@
 #include <linux/input.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <errno.h>
 #include <sys/uio.h>
 
-#include "compositor.h"
+#include <libweston/libweston.h>
 #include "shared/helpers.h"
 #include "shared/timespec-util.h"
+#include "backend.h"
+#include "libweston-internal.h"
 
 #include "wcap/wcap-decode.h"
 
@@ -204,7 +207,7 @@ weston_screenshooter_shoot(struct weston_output *output,
 	l->listener.notify = screenshooter_frame_notify;
 	wl_signal_add(&output->frame_signal, &l->listener);
 	output->disable_planes++;
-	weston_output_schedule_repaint(output);
+	weston_output_damage(output);
 
 	return 0;
 }
@@ -431,7 +434,8 @@ weston_recorder_create(struct weston_output *output, const char *filename)
 			    O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC, 0644);
 
 	if (recorder->fd < 0) {
-		weston_log("problem opening output file %s: %m\n", filename);
+		weston_log("problem opening output file %s: %s\n", filename,
+			   strerror(errno));
 		goto err_recorder;
 	}
 
