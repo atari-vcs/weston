@@ -1,3 +1,11 @@
+weston (7.0.0-1~exp1ata3) vcs; urgency=medium
+
+  * debian/patches/xwm: Update to latest version of pekka's xwm fixes, should
+    both fix fullscreen windows now showing and them being at the wrong
+    location
+
+ -- Sjoerd Simons <sjoerd.simons@collabora.co.uk>  Mon, 09 Dec 2019 23:05:51 +0100
+
 weston (7.0.0-1~exp1ata2) vcs; urgency=medium
 
   * debian/control: Disable rdp backend support

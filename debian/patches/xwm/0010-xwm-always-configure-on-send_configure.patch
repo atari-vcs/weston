@@ -1,0 +1,59 @@
+From: Pekka Paalanen <pekka.paalanen@collabora.com>
+Date: Mon, 9 Dec 2019 13:03:02 +0200
+Subject: xwm: always configure on send_configure()
+
+There is more state than just the application window width and height that
+affects whether calling weston_wm_window_configure() is necessary: everything
+that affects the frame window, fullscreen state in particular. Therefore do not
+skip the call by just width and height.
+
+If send_configure() happens to be called "unnecessarily", this will now forward
+some of those calls to the X11 clients. However, since it uses an idle task, it
+should not result in a flood at least. And if send_configure() is spammed,
+maybe that should then be fixed in its callers.
+
+This patch should fix the misplacement of a fullscreen X11 window due to the
+frame window being incorrectly sized and positioned, and the app window
+incorrectly positioned inside the frame window.
+
+The fullscreen window problems were observed in a case where the window does
+not hit legacy_fullscreen() but first maps and then sets
+_NET_WM_STATE_FULLSCREEN. Additionally the initial window size must match the
+output size where it gets fullscreened. In that case the frame window was left
+as if not fullscreened.
+
+This practically reverts 3f53d9179bcdb11d053527336ac4a49f274bc8d1.
+
+Signed-off-by: Pekka Paalanen <pekka.paalanen@collabora.com>
+(cherry picked from commit 723e66c68d895450e6dd39fdcc6fe9acc034767b)
+---
+ xwayland/window-manager.c | 15 ++++++++-------
+ 1 file changed, 8 insertions(+), 7 deletions(-)
+
+diff --git a/xwayland/window-manager.c b/xwayland/window-manager.c
+index 0b67508..5240205 100644
+--- a/xwayland/window-manager.c
++++ b/xwayland/window-manager.c
+@@ -2769,14 +2769,15 @@ send_configure(struct weston_surface *surface, int32_t width, int32_t height)
+ 	else
+ 		new_height = 1;
+ 
+-	if (window->width == new_width && window->height == new_height)
+-		return;
+-
+-	window->width = new_width;
+-	window->height = new_height;
++	if (window->width != new_width || window->height != new_height) {
++		window->width = new_width;
++		window->height = new_height;
+ 
+-	if (window->frame)
+-		frame_resize_inside(window->frame, window->width, window->height);
++		if (window->frame) {
++			frame_resize_inside(window->frame,
++					    window->width, window->height);
++		}
++	}
+ 
+ 	if (window->configure_source)
+ 		return;

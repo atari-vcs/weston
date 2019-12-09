@@ -6,7 +6,7 @@ Print all ConfigureWindow messages XWM sends. Helps debugging XWM why
 fullscreening doesn't work right.
 
 Signed-off-by: Pekka Paalanen <pekka.paalanen@collabora.com>
-(cherry picked from commit ab39fa7e1b326e241af55931bff6a5323fe0088c)
+(cherry picked from commit 7eba51f509c462d76d1e12766ab40f2ff214d8f5)
 ---
  xwayland/window-manager.c | 78 +++++++++++++++++++++++++++++++++++------------
  1 file changed, 59 insertions(+), 19 deletions(-)

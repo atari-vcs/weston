@@ -5,8 +5,12 @@ Subject: xwm: debug _NET_WM_STATE client message
 The generic message does not interpret the atoms, so this makes it explicit on
 what the client is changing. Helps keeping track of what is happening.
 
+Unfortunately, this printing does not work right until wayland/weston#326 is
+fixed, since a call to get_atom_name() will overwrite the result of a previous
+call.
+
 Signed-off-by: Pekka Paalanen <pekka.paalanen@collabora.com>
-(cherry picked from commit 562a386f79792fef31f4d7f517235386c44cc705)
+(cherry picked from commit 856a054e9ea32142a157b2570b6f9ded70f293ce)
 ---
  xwayland/window-manager.c | 21 +++++++++++++++++++++
  1 file changed, 21 insertions(+)

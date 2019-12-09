@@ -12,7 +12,7 @@ To avoid patching two different places with the same thing, refactor the code
 into a common helper.
 
 Signed-off-by: Pekka Paalanen <pekka.paalanen@collabora.com>
-(cherry picked from commit bedcca67752f63e4c162a5596550d6aafa855768)
+(cherry picked from commit a5a8d1475c2e7bb56998868e1886d3169537a38b)
 ---
  xwayland/window-manager.c | 39 ++++++++++++++++++++++-----------------
  1 file changed, 22 insertions(+), 17 deletions(-)

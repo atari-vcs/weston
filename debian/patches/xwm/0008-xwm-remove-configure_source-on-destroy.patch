@@ -6,8 +6,10 @@ It would lead to use-after-free if there was a pending idle callback to
 weston_wm_window_configure() when the weston_wm_window gets destroyed. Make
 sure the callback will not fire.
 
+Found by inspection.
+
 Signed-off-by: Pekka Paalanen <pekka.paalanen@collabora.com>
-(cherry picked from commit b1e45914dad777c65c78cd223c0f5449ed411a32)
+(cherry picked from commit b80734d3770f2d5755f57dfb00426f0fc59bee45)
 ---
  xwayland/window-manager.c | 2 ++
  1 file changed, 2 insertions(+)

@@ -14,7 +14,7 @@ destruction too.
 Found by inspection.
 
 Signed-off-by: Pekka Paalanen <pekka.paalanen@collabora.com>
-(cherry picked from commit 54a456b8860a38b6f1b7b587c7a5c2a697e588fe)
+(cherry picked from commit 4a2af2ebb54613ca238319333a1f44db7611cf44)
 ---
  xwayland/window-manager.c | 7 +++++--
  1 file changed, 5 insertions(+), 2 deletions(-)
