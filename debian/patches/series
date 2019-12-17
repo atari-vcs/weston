@@ -8,3 +8,4 @@ xwm/0007-xwm-remove-configure_source-on-dispatch.patch
 xwm/0008-xwm-remove-configure_source-on-destroy.patch
 xwm/0009-xwm-do-not-configure-frame-window-None.patch
 xwm/0010-xwm-always-configure-on-send_configure.patch
+atari/Allow-weston-to-start-from-a-systemd-user-session.patch

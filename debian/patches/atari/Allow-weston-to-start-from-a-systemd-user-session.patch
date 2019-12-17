@@ -1,0 +1,77 @@
+From: Sjoerd Simons <sjoerd.simons@collabora.co.uk>
+Date: Sun, 15 Dec 2019 22:11:08 +0100
+Subject: Allow weston to start from a systemd user session
+
+When a compositor is started from a systemd user session it won't be
+attached to any seat/logind session specifically. When this happens
+rather then giving up look for a display session of type wayland and
+if exists use that.
+
+This is similar to how e.g. gnome-shell gets launched from systemd user
+units on modern desktops.
+---
+ libweston/launcher-logind.c | 43 +++++++++++++++++++++++++++++++++++++++----
+ 1 file changed, 39 insertions(+), 4 deletions(-)
+
+diff --git a/libweston/launcher-logind.c b/libweston/launcher-logind.c
+index 9b3c52f..7c2b065 100644
+--- a/libweston/launcher-logind.c
++++ b/libweston/launcher-logind.c
+@@ -722,6 +722,43 @@ launcher_logind_activate(struct launcher_logind *wl)
+ 	return 0;
+ }
+ 
++static bool
++launcher_logind_get_session (struct launcher_logind *wl)
++{
++	char *type = NULL;
++	int r;
++
++	r = sd_pid_get_session(getpid(), &wl->sid);
++	if (r < 0) {
++		if (r != -ENODATA) {
++			weston_log("logind: not running in a systemd session: %d\n", r);
++			return r;
++		}
++	} else {
++		return r;
++	}
++
++	/* When not inside a systemd session look if there is a suitable one */
++	r = sd_uid_get_display (getuid(), &wl->sid);
++	if (r < 0) {
++		weston_log("logind: cannot find  systemd session for uid: %d %d\n", getuid(), r);
++		return r;
++	}
++
++	r = sd_session_get_type (wl->sid, &type);
++	if (r < 0) {
++		weston_log("logind: failed to get session type.\n");
++		return r;
++	}
++
++	if (strcmp (type, "wayland")) {
++		weston_log("logind: session type %s not graphical.\n", type);
++		return -EINVAL;
++	}
++
++	return r;
++}
++
+ static int
+ launcher_logind_connect(struct weston_launcher **out, struct weston_compositor *compositor,
+ 			int tty, const char *seat_id, bool sync_drm)
+@@ -747,11 +784,9 @@ launcher_logind_connect(struct weston_launcher **out, struct weston_compositor *
+ 		goto err_wl;
+ 	}
+ 
+-	r = sd_pid_get_session(getpid(), &wl->sid);
+-	if (r < 0) {
+-		weston_log("logind: not running in a systemd session\n");
++	r = launcher_logind_get_session(wl);
++	if (r < 0)
+ 		goto err_seat;
+-	}
+ 
+ 	t = NULL;
+ 	r = sd_session_get_seat(wl->sid, &t);
