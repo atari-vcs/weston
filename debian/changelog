@@ -1,3 +1,11 @@
+weston (9.0.0-4~exp1ata3) vcs; urgency=medium
+
+  * debian/patches/atari/Allow-weston-to-start-from-a-systemd-user-session.patch
+    + Added. Allow weston to run as a user service rather then a system
+      service.
+
+ -- Sjoerd Simons <sjoerd.simons@collabora.co.uk>  Tue, 17 Dec 2019 11:08:30 +0100
+
 weston (9.0.0-4~exp1ata2) vcs; urgency=medium
 
   * debian/control: Disable rdp backend support
