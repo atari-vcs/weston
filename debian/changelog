@@ -1,3 +1,10 @@
+weston (7.0.0-1~exp1ata5) vcs; urgency=medium
+
+  * debian/patches/atari/Do-not-trigger-invalid-destructors-when-hotunplugging.patch
+    + Added. Fixes Weston crash when hotunplugging.
+
+ -- Christopher Obbard <chris.obbard@collabora.com>  Wed, 05 Feb 2020 17:44:43 +0000
+
 weston (7.0.0-1~exp1ata4) vcs; urgency=medium
 
   * debian/patches/atari/Allow-weston-to-start-from-a-systemd-user-session.patch
