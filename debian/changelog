@@ -1,3 +1,10 @@
+weston (7.0.0-1~exp1ata6) vcs; urgency=medium
+
+  * debian/patches/atari/Avoid-NULL-output-dereference-when-getting-surface-label.patch
+     + Added. Fixes Dashboard crash when hotunplugging.
+
+ -- Christopher Obbard <chris.obbard@collabora.com>  Thu, 06 Feb 2020 18:17:26 +0000
+
 weston (7.0.0-1~exp1ata5) vcs; urgency=medium
 
   * debian/patches/atari/Do-not-trigger-invalid-destructors-when-hotunplugging.patch
