@@ -1,0 +1,67 @@
+From: Alexandros Frantzis <alexandros.frantzis@collabora.com>
+Date: Wed, 6 May 2020 18:34:17 +0300
+Subject: desktop-shell: Retain surface states across display reconnects
+
+desktop-shell currently removes the fullscreen/maximized state of
+affected surfaces during output reconfiguration. However, for a shell
+with fullscreen-like behavior we want to retain this state, which is
+what is done in this commit.
+
+Additionally, this commit avoids sending a "natural size" hint (i.e.,
+0x0) to XWayland surfaces, since they don't seem to deal with it
+properly.
+
+Signed-off-by: Alexandros Frantzis <alexandros.frantzis@collabora.com>
+---
+ desktop-shell/shell.c | 24 +++++++++++++++++++-----
+ 1 file changed, 19 insertions(+), 5 deletions(-)
+
+diff --git a/desktop-shell/shell.c b/desktop-shell/shell.c
+index 00ee107..a7e5d97 100644
+--- a/desktop-shell/shell.c
++++ b/desktop-shell/shell.c
+@@ -2680,8 +2680,16 @@ set_fullscreen(struct shell_surface *shsurf, bool fullscreen,
+ 		shell_surface_set_output(shsurf, output);
+ 		shsurf->fullscreen_output = shsurf->output;
+ 
+-		width = shsurf->output->width;
+-		height = shsurf->output->height;
++		/* Atari VCS: Assume a 1080p display if we have no current
++		 * output. In any case, the fullscreen surfaces will be
++		 * reconfigured when an output is plugged in. */
++		if (shsurf->output) {
++			width = shsurf->output->width;
++			height = shsurf->output->height;
++		} else {
++			width = 1920;
++			height = 1080;
++		}
+ 	} else if (weston_desktop_surface_get_maximized(desktop_surface)) {
+ 		get_maximized_size(shsurf, &width, &height);
+ 	}
+@@ -4757,6 +4765,8 @@ shell_reposition_view_on_output_change(struct weston_view *view)
+ 		x = first_output->x + first_output->width / 4;
+ 		y = first_output->y + first_output->height / 4;
+ 
++		output = first_output;
++
+ 		weston_view_set_position(view, x, y);
+ 	} else {
+ 		weston_view_geometry_dirty(view);
+@@ -4767,9 +4777,13 @@ shell_reposition_view_on_output_change(struct weston_view *view)
+ 	if (!shsurf)
+ 		return;
+ 
+-	shsurf->saved_position_valid = false;
+-	set_maximized(shsurf, false);
+-	set_fullscreen(shsurf, false, NULL);
++	/* Atari VCS: Retain the state of surfaces across output
++	 * disconnects/reconnects. Reapply maximized or fullscreen
++	 * states to adapt to new output dimensions. */
++	if (shsurf->state.maximized)
++		set_maximized(shsurf, true);
++	if (shsurf->state.fullscreen)
++		set_fullscreen(shsurf, true, output);
+ }
+ 
+ void

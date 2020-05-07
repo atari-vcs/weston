@@ -11,3 +11,4 @@ xwm/0010-xwm-always-configure-on-send_configure.patch
 atari/Allow-weston-to-start-from-a-systemd-user-session.patch
 atari/Do-not-trigger-invalid-destructors-when-hotunplugging.patch
 atari/Avoid-NULL-output-dereference-when-getting-surface-label.patch
+atari/Retain-surface-states-across-display-reconnects.patch

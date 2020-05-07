@@ -1,3 +1,11 @@
+weston (7.0.0-1~exp1ata7) vcs; urgency=medium
+
+  * debian/patches/atari/Retain-surface-states-across-display-reconnects.patch
+     + Added. Fixes incorrectly sized XWayland surfaces after (re)plugging
+       display (VO-145).
+
+ -- Alexandros Frantzis <alexandros.frantzis@collabora.com>  Thu, 07 May 2020 13:44:38 +0300
+
 weston (7.0.0-1~exp1ata6) vcs; urgency=medium
 
   * debian/patches/atari/Avoid-NULL-output-dereference-when-getting-surface-label.patch
