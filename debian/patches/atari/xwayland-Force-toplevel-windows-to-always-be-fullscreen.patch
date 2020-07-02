@@ -1,0 +1,54 @@
+From: Alexandros Frantzis <alexandros.frantzis@collabora.com>
+Date: Thu, 2 Jul 2020 17:00:07 +0300
+Subject: xwayland: Force toplevel windows to always be fullscreen
+
+Signed-off-by: Alexandros Frantzis <alexandros.frantzis@collabora.com>
+---
+ xwayland/window-manager.c | 20 ++++++++++++++++++++
+ 1 file changed, 20 insertions(+)
+
+diff --git a/xwayland/window-manager.c b/xwayland/window-manager.c
+index 5240205..5775f96 100644
+--- a/xwayland/window-manager.c
++++ b/xwayland/window-manager.c
+@@ -181,6 +181,9 @@ get_wm_window(struct weston_surface *surface);
+ static void
+ weston_wm_set_net_active_window(struct weston_wm *wm, xcb_window_t window);
+ 
++static void
++weston_wm_window_set_net_wm_state(struct weston_wm_window *window);
++
+ static void
+ weston_wm_window_schedule_repaint(struct weston_wm_window *window);
+ 
+@@ -645,6 +648,15 @@ weston_wm_window_read_properties(struct weston_wm_window *window)
+ 		if (!window->machine || strcmp(window->machine, name))
+ 			window->pid = 0;
+ 	}
++
++	/* atari: Force toplevel windows to be fullscreen */
++	if (window->type == wm->atom.net_wm_window_type_normal &&
++	    !window->fullscreen) {
++		window->fullscreen = 1;
++		window->maximized_vert = 0;
++		window->maximized_horz = 0;
++		weston_wm_window_set_net_wm_state(window);
++	}
+ }
+ 
+ #undef TYPE_WM_PROTOCOLS
+@@ -1785,6 +1797,14 @@ weston_wm_window_handle_state(struct weston_wm_window *window,
+ 		  get_atom_name(wm->conn, property1),
+ 		  property2 ? get_atom_name(wm->conn, property2) : "");
+ 
++	/* atari: Force toplevel windows to be fullscreen */
++	if (window->type == wm->atom.net_wm_window_type_normal) {
++		property1 = wm->atom.net_wm_state_fullscreen;
++		property2 = wm->atom.net_wm_state_fullscreen;
++		action = _NET_WM_STATE_ADD;
++		wm_printf(wm, "XWM: Note: Replacing client message with fullscreen state addition\n");
++	}
++
+ 	if ((property1 == wm->atom.net_wm_state_fullscreen ||
+ 	     property2 == wm->atom.net_wm_state_fullscreen) &&
+ 	    update_state(action, &window->fullscreen)) {

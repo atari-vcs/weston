@@ -1,3 +1,13 @@
+weston (7.0.0-1~exp1ata8) vcs; urgency=medium
+
+  * debian/patches/atari/xwayland-Force-toplevel-windows-to-always-be-fullscreen.patch
+     + Added. Forces X11 apps to be shown and to remain fullscreen (VO-337).
+  * debian/patches/atari/desktop-shell-Place-all-surfaces-on-the-normal-layer.patch
+     + Added. Fixes X11 menus not appearing in front of fullscreen app
+       surfaces (VO-337).
+
+ -- Alexandros Frantzis <alexandros.frantzis@collabora.com>  Fri, 03 Jul 2020 13:33:29 +0300
+
 weston (7.0.0-1~exp1ata7) vcs; urgency=medium
 
   * debian/patches/atari/Retain-surface-states-across-display-reconnects.patch

@@ -1,0 +1,50 @@
+From: Alexandros Frantzis <alexandros.frantzis@collabora.com>
+Date: Fri, 3 Jul 2020 15:59:29 +0300
+Subject: desktop-shell: Place all surfaces on the normal layer
+
+Non-toplevel xwayland surfaces (e.g., popups) are placed on their own
+layer over the normal surface layer, but below the fullscreen layer.
+Such surfaces are obscured by top-levels at the fullscreen layer.
+
+Since we want all the toplevels to be fullscreen, the distinction
+between fullscreen and normal layers is not useful. This commit changes
+desktop-shell to always use the normal layer even for fullscreen
+surfaces, thus also solving the aforementioned issue with X11 popups.
+
+Signed-off-by: Alexandros Frantzis <alexandros.frantzis@collabora.com>
+---
+ desktop-shell/shell.c | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/desktop-shell/shell.c b/desktop-shell/shell.c
+index a7e5d97..db20dbe 100644
+--- a/desktop-shell/shell.c
++++ b/desktop-shell/shell.c
+@@ -1908,10 +1908,13 @@ shell_surface_calculate_layer_link (struct shell_surface *shsurf)
+ {
+ 	struct workspace *ws;
+ 
++	/* atari: Place all surfaces on normal layer */
++#if 0
+ 	if (weston_desktop_surface_get_fullscreen(shsurf->desktop_surface) &&
+ 	    !shsurf->state.lowered) {
+ 		return &shsurf->shell->fullscreen_layer.view_list;
+ 	}
++#endif
+ 
+ 	/* Move the surface to a normal workspace layer so that surfaces
+ 	 * which were previously fullscreen or transient are no longer
+@@ -2182,10 +2185,13 @@ shell_configure_fullscreen(struct shell_surface *shsurf)
+ 		weston_desktop_surface_get_surface(shsurf->desktop_surface);
+ 	int32_t surf_x, surf_y, surf_width, surf_height;
+ 
++	/* atari: Place all surfaces on normal layer */
++#if 0
+ 	/* Reverse the effect of lower_fullscreen_layer() */
+ 	weston_layer_entry_remove(&shsurf->view->layer_link);
+ 	weston_layer_entry_insert(&shsurf->shell->fullscreen_layer.view_list,
+ 				  &shsurf->view->layer_link);
++#endif
+ 
+ 	if (!shsurf->fullscreen_output) {
+ 		/* If there is no output, there's not much we can do.
