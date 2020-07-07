@@ -14,3 +14,4 @@ atari/Avoid-NULL-output-dereference-when-getting-surface-label.patch
 atari/Retain-surface-states-across-display-reconnects.patch
 atari/xwayland-Force-toplevel-windows-to-always-be-fullscreen.patch
 atari/desktop-shell-Place-all-surfaces-on-the-normal-layer.patch
+atari/screenshooter-Allow-only-an-authorized-client-to-take-screenshots.patch

@@ -5,6 +5,8 @@ weston (7.0.0-1~exp1ata8) vcs; urgency=medium
   * debian/patches/atari/desktop-shell-Place-all-surfaces-on-the-normal-layer.patch
      + Added. Fixes X11 menus not appearing in front of fullscreen app
        surfaces (VO-337).
+  * debian/patches/atari/screenshooter-Allow-only-an-authorized-client-to-take-screenshots.patch
+     + Added. Allow only the system-bridge-daemon to take screenshots (VO-337).
 
  -- Alexandros Frantzis <alexandros.frantzis@collabora.com>  Fri, 03 Jul 2020 13:33:29 +0300
 

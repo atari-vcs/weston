@@ -1,0 +1,194 @@
+From: Alexandros Frantzis <alexandros.frantzis@collabora.com>
+Date: Tue, 7 Jul 2020 15:19:55 +0300
+Subject: screenshooter: Allow only an authorized client to take screenshots
+
+DANGER: The approach used is likely vulnerable to a pid recycling
+attack, and shouldn't be relied upon for any serious security.
+
+This commits restricts the screenshooting functionality to a hardcoded
+authorized client (authorized based on its executable path).  It also
+disables the built-in screenshooting and recording key bindings to
+prevent users from inadvertently filling the disk with screenshots and,
+especially, recording data.
+
+All of the changes are hardcoded in the executable instead of being more
+generically implemented at runtime with config options, since the weston
+config file is not considered secure.
+
+Signed-off-by: Alexandros Frantzis <alexandros.frantzis@collabora.com>
+---
+ compositor/weston-screenshooter.c | 83 ++++++++++++++++++++++++++++++++++++++-
+ 1 file changed, 82 insertions(+), 1 deletion(-)
+
+diff --git a/compositor/weston-screenshooter.c b/compositor/weston-screenshooter.c
+index ed354b0..aace690 100644
+--- a/compositor/weston-screenshooter.c
++++ b/compositor/weston-screenshooter.c
+@@ -25,7 +25,10 @@
+ 
+ #include "config.h"
+ 
++#include <assert.h>
+ #include <stdint.h>
++#include <string.h>
++#include <unistd.h>
+ #include <linux/input.h>
+ 
+ #include <libweston/libweston.h>
+@@ -34,6 +37,9 @@
+ #include "shared/helpers.h"
+ #include <libweston/weston-log.h>
+ 
++#define ATARI_ALLOW_ONLY_AUTHORIZED_SCREENSHOOTER 1
++#define ATARI_AUTHORIZED_SCREENSHOOTER_PATH "/usr/lib/x86_64-linux-gnu/system-bridge-daemon"
++
+ struct screenshooter {
+ 	struct weston_compositor *ec;
+ 	struct wl_global *global;
+@@ -41,6 +47,7 @@ struct screenshooter {
+ 	struct weston_process process;
+ 	struct wl_listener destroy_listener;
+ 	struct weston_recorder *recorder;
++	char *authorized_screenshooter_path;
+ };
+ 
+ static void
+@@ -83,18 +90,79 @@ struct weston_screenshooter_interface screenshooter_implementation = {
+ 	screenshooter_shoot
+ };
+ 
++#if ATARI_ALLOW_ONLY_AUTHORIZED_SCREENSHOOTER == 1
++
++static char *
++wl_client_get_exe_path(struct wl_client *client)
++{
++	static const size_t buffer_size = 256;
++	pid_t pid = 0;
++	char *buffer = NULL;
++	char *proc_exe_path = NULL;
++	int ret;
++
++	wl_client_get_credentials(client, &pid, NULL, NULL);
++
++	if (asprintf(&proc_exe_path, "/proc/%d/exe", pid) < 0)
++		goto err;
++
++	buffer = zalloc(buffer_size);
++	if (!buffer)
++		goto err;
++
++	ret = readlink(proc_exe_path, buffer, buffer_size - 1);
++	if (ret < 0)
++		goto err;
++
++	free(proc_exe_path);
++
++	return buffer;
++
++err:
++	free(buffer);
++	free(proc_exe_path);
++	return NULL;
++}
++
++#endif
++
+ static void
+ bind_shooter(struct wl_client *client,
+ 	     void *data, uint32_t version, uint32_t id)
+ {
+ 	struct screenshooter *shooter = data;
+ 	struct wl_resource *resource;
++#if ATARI_ALLOW_ONLY_AUTHORIZED_SCREENSHOOTER == 1
++	bool authorized = false;
++	char *exe_path;
++#else
+ 	bool debug_enabled =
+ 		weston_compositor_is_debug_protocol_enabled(shooter->ec);
++#endif
+ 
+ 	resource = wl_resource_create(client,
+ 				      &weston_screenshooter_interface, 1, id);
+ 
++	/* atari: Disable built-in screenshooter/recorder, only allow
++	 * authorized client. */
++#if ATARI_ALLOW_ONLY_AUTHORIZED_SCREENSHOOTER == 1
++	assert(shooter->authorized_screenshooter_path);
++	/* DANGER: This check is likely vulnerable to a pid recycling attack,
++	 * since we rely on the client pid to get the exe path. */
++	exe_path = wl_client_get_exe_path(client);
++	authorized = exe_path &&
++		     !strcmp(exe_path, shooter->authorized_screenshooter_path);
++
++	free(exe_path);
++
++	if (!authorized) {
++		wl_resource_post_error(resource, WL_DISPLAY_ERROR_INVALID_OBJECT,
++				       "screenshooter failed: permission denied. "\
++				       "Client is not authorized to take screenshots.");
++		return;
++	}
++
++#else
+ 	if (!debug_enabled && !shooter->client) {
+ 		wl_resource_post_error(resource, WL_DISPLAY_ERROR_INVALID_OBJECT,
+ 				       "screenshooter failed: permission denied. "\
+@@ -105,11 +173,14 @@ bind_shooter(struct wl_client *client,
+ 				       "screenshooter failed: permission denied.");
+ 		return;
+ 	}
++#endif
+ 
+ 	wl_resource_set_implementation(resource, &screenshooter_implementation,
+ 				       data, NULL);
+ }
+ 
++#if ATARI_ALLOW_ONLY_AUTHORIZED_SCREENSHOOTER != 1
++
+ static void
+ screenshooter_sigchld(struct weston_process *process, int status)
+ {
+@@ -126,7 +197,6 @@ screenshooter_binding(struct weston_keyboard *keyboard,
+ 	struct screenshooter *shooter = data;
+ 	char *screenshooter_exe;
+ 
+-
+ 	screenshooter_exe = wet_get_bindir_path("weston-screenshooter");
+ 	if (!screenshooter_exe) {
+ 		weston_log("Could not construct screenshooter path.\n");
+@@ -164,6 +234,8 @@ recorder_binding(struct weston_keyboard *keyboard, const struct timespec *time,
+ 	}
+ }
+ 
++#endif
++
+ static void
+ screenshooter_destroy(struct wl_listener *listener, void *data)
+ {
+@@ -173,6 +245,7 @@ screenshooter_destroy(struct wl_listener *listener, void *data)
+ 	wl_list_remove(&shooter->destroy_listener.link);
+ 
+ 	wl_global_destroy(shooter->global);
++	free(shooter->authorized_screenshooter_path);
+ 	free(shooter);
+ }
+ 
+@@ -190,10 +263,18 @@ screenshooter_create(struct weston_compositor *ec)
+ 	shooter->global = wl_global_create(ec->wl_display,
+ 					   &weston_screenshooter_interface, 1,
+ 					   shooter, bind_shooter);
++
++	/* atari: Disable built-in screenshooter/recorder, only allow
++	 * authorized client. */
++#if ATARI_ALLOW_ONLY_AUTHORIZED_SCREENSHOOTER == 1
++	shooter->authorized_screenshooter_path =
++		strdup(ATARI_AUTHORIZED_SCREENSHOOTER_PATH);
++#else
+ 	weston_compositor_add_key_binding(ec, KEY_S, MODIFIER_SUPER,
+ 					  screenshooter_binding, shooter);
+ 	weston_compositor_add_key_binding(ec, KEY_R, MODIFIER_SUPER,
+ 					  recorder_binding, shooter);
++#endif
+ 
+ 	shooter->destroy_listener.notify = screenshooter_destroy;
+ 	wl_signal_add(&ec->destroy_signal, &shooter->destroy_listener);
