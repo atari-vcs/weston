@@ -1,0 +1,82 @@
+From: Christopher Obbard <chris.obbard@collabora.com>
+Date: Fri, 21 Aug 2020 12:36:01 +0100
+Subject: shell: add keybinding to launch in-game menu
+
+When Ctrl+Esc is pressed, show the in-game menu.
+
+Signed-off-by: Christopher Obbard <chris.obbard@collabora.com>
+---
+ desktop-shell/shell.c | 46 ++++++++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 46 insertions(+)
+
+diff --git a/desktop-shell/shell.c b/desktop-shell/shell.c
+index db20dbe..2b30f57 100644
+--- a/desktop-shell/shell.c
++++ b/desktop-shell/shell.c
+@@ -32,6 +32,7 @@
+ #include <unistd.h>
+ #include <linux/input.h>
+ #include <assert.h>
++#include <errno.h>
+ #include <signal.h>
+ #include <math.h>
+ #include <sys/types.h>
+@@ -4597,6 +4598,47 @@ switcher_binding(struct weston_keyboard *keyboard, const struct timespec *time,
+ 	switcher_next(switcher);
+ }
+ 
++static void
++atari_menu_cleanup(struct weston_process *proc, int status)
++{
++	weston_log("atari_menu_cleanup: process killed; status=%d\n", status);
++
++	free(proc);
++}
++
++static void
++atari_menu_binding(struct weston_keyboard *keyboard, const struct timespec *time,
++		   uint32_t key, void *data)
++{
++	pid_t pid;
++	struct weston_process *proc;
++
++	weston_log("atari_menu_binding: show in-game menu\n");
++
++	proc = zalloc(sizeof *proc);
++	if (!proc)
++		return;
++
++	pid = fork();
++	if (pid == -1) {
++		weston_log("atari_menu_binding: fork failed: %s\n",
++			   strerror(errno));
++		return;
++	}
++	if (pid == 0) {
++		if (execl("/usr/bin/sbd-cli", "sbd-cli",
++			  "--show-in-game-menu", NULL) < 0) {
++			weston_log("atari_menu_binding: exec failed: %s\n",
++				   strerror(errno));
++		}
++		_exit(-1);
++	}
++
++	proc->pid = pid;
++	proc->cleanup = atari_menu_cleanup;
++	weston_watch_process(proc);
++}
++
+ static void
+ backlight_binding(struct weston_keyboard *keyboard, const struct timespec *time,
+ 		  uint32_t key, void *data)
+@@ -4993,6 +5035,10 @@ shell_add_bindings(struct weston_compositor *ec, struct desktop_shell *shell)
+ 	uint32_t mod;
+ 	int i, num_workspace_bindings;
+ 
++	/* Atari VCS: keybinding to bring-up menu */
++	weston_compositor_add_key_binding(ec, KEY_ESC, MODIFIER_CTRL,
++					  atari_menu_binding, ec);
++
+ 	if (shell->allow_zap)
+ 		weston_compositor_add_key_binding(ec, KEY_BACKSPACE,
+ 					          MODIFIER_CTRL | MODIFIER_ALT,

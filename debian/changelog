@@ -1,3 +1,10 @@
+weston (7.0.0-1~exp1ata9) vcs; urgency=medium
+
+  * debian/patches/atari/keybinding-in-game-menu.patch
+     + Added. Adds a keybinding to show the in-game menu.
+
+ -- Christopher Obbard <chris.obbard@collabora.com>  Fri, 21 Aug 2020 15:22:25 +0100
+
 weston (7.0.0-1~exp1ata8) vcs; urgency=medium
 
   * debian/patches/atari/xwayland-Force-toplevel-windows-to-always-be-fullscreen.patch
