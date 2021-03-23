@@ -3,7 +3,7 @@
 override_dh_auto_configure:
 	dh_auto_configure -- -Dscreenshare=true  \
 		-Dbackend-rdp=false \
-		-Dsystemd=true -Dsimple-dmabuf-drm=auto
+		-Dsystemd=true -Dpipewire=false
 
 override_dh_auto_test:
 	mkdir -p $(CURDIR)/debian/tmp/tmp/xdgruntimedir
