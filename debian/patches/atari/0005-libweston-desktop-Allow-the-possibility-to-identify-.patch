@@ -1,0 +1,87 @@
+From 668a60ff0b1268b83a0eb8144f22db45b27a44b0 Mon Sep 17 00:00:00 2001
+From: Marius Vlad <marius.vlad@collabora.com>
+Date: Sat, 20 Mar 2021 12:26:02 +0200
+Subject: [PATCH 5/7] libweston-desktop: Allow the possibility to identify
+ weston_desktop_api user
+
+This way can differentiante between different users (shells)
+currently running in case we might to take some decisions based on the
+shell being in use.
+
+Signed-off-by: Marius Vlad <marius.vlad@collabora.com>
+---
+ desktop-shell/shell.c                         | 1 +
+ include/libweston-desktop/libweston-desktop.h | 8 ++++++++
+ kiosk-shell/kiosk-shell.c                     | 1 +
+ libweston-desktop/libweston-desktop.c         | 5 +++++
+ 4 files changed, 15 insertions(+)
+
+diff --git a/desktop-shell/shell.c b/desktop-shell/shell.c
+index c1c126e8..2c3aa188 100644
+--- a/desktop-shell/shell.c
++++ b/desktop-shell/shell.c
+@@ -2964,6 +2964,7 @@ desktop_surface_set_xwayland_position(struct weston_desktop_surface *surface,
+ 
+ static const struct weston_desktop_api shell_desktop_api = {
+ 	.struct_size = sizeof(struct weston_desktop_api),
++	.name = "desktop-shell",
+ 	.surface_added = desktop_surface_added,
+ 	.surface_removed = desktop_surface_removed,
+ 	.committed = desktop_surface_committed,
+diff --git a/include/libweston-desktop/libweston-desktop.h b/include/libweston-desktop/libweston-desktop.h
+index 3e7ac738..41c113cf 100644
+--- a/include/libweston-desktop/libweston-desktop.h
++++ b/include/libweston-desktop/libweston-desktop.h
+@@ -113,6 +113,11 @@ struct weston_desktop_api {
+ 	 */
+ 	void (*set_xwayland_position)(struct weston_desktop_surface *surface,
+ 				      int32_t x, int32_t y, void *user_data);
++
++	/**
++	 * Name used to identify the 'user' of the weston_desktop_api
++	 */
++	const char *name;
+ };
+ 
+ void
+@@ -124,6 +129,9 @@ weston_desktop_create(struct weston_compositor *compositor,
+ void
+ weston_desktop_destroy(struct weston_desktop *desktop);
+ 
++const char *
++weston_desktop_get_api_name(struct weston_desktop *desktop);
++
+ struct wl_client *
+ weston_desktop_client_get_client(struct weston_desktop_client *client);
+ void
+diff --git a/kiosk-shell/kiosk-shell.c b/kiosk-shell/kiosk-shell.c
+index 5f353182..4d8d7539 100644
+--- a/kiosk-shell/kiosk-shell.c
++++ b/kiosk-shell/kiosk-shell.c
+@@ -816,6 +816,7 @@ desktop_surface_set_xwayland_position(struct weston_desktop_surface *desktop_sur
+ 
+ static const struct weston_desktop_api kiosk_shell_desktop_api = {
+ 	.struct_size = sizeof(struct weston_desktop_api),
++	.name = "kiosk-shell",
+ 	.surface_added = desktop_surface_added,
+ 	.surface_removed = desktop_surface_removed,
+ 	.committed = desktop_surface_committed,
+diff --git a/libweston-desktop/libweston-desktop.c b/libweston-desktop/libweston-desktop.c
+index d92958d4..cc6549f9 100644
+--- a/libweston-desktop/libweston-desktop.c
++++ b/libweston-desktop/libweston-desktop.c
+@@ -112,6 +112,11 @@ weston_desktop_destroy(struct weston_desktop *desktop)
+ 	free(desktop);
+ }
+ 
++WL_EXPORT const char *
++weston_desktop_get_api_name(struct weston_desktop *desktop)
++{
++	return desktop->api.name;
++}
+ 
+ struct weston_compositor *
+ weston_desktop_get_compositor(struct weston_desktop *desktop)
+-- 
+2.29.2
+
