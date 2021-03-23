@@ -1,3 +1,14 @@
+weston (9.0.0-4~exp1ata7) vcs; urgency=medium
+
+  * debian/patches/atari/0005-libweston-desktop-Allow-the-possibility-to-identify-.patch
+    + added.
+  * debian/patches/atari/0006-xwayland-internal-interface-Extract-weston_desktop.patch
+    + added.
+  * debian/patches/atari/0007-window-manager-Force-xwayland-surfaces-be-fullscreen.patch
+    + added.
+
+ -- Marius Vlad <marius.vlad@collabora.com>  Tue, 23 Mar 2021 11:07:31 +0200
+
 weston (9.0.0-4~exp1ata6) vcs; urgency=medium
 
   * debian/patches/atari/0004-screenshooter-Allow-only-an-authorized-client-to-tak.patch
