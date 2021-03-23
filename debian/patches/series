@@ -1,2 +1,3 @@
 atari/Allow-weston-to-start-from-a-systemd-user-session.patch
 atari/0002-kiosk-shell-add-keybinding-to-launch-in-game-menu.patch
+atari/0003-kiosk-shell-Enable-screenshooter-in-kiosk-shell.patch
