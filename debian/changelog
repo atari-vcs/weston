@@ -1,3 +1,10 @@
+weston (9.0.0-4~exp1ata8) vcs; urgency=medium
+
+  * debian/patches/atari/0001-kiosk-shell-Add-transform_handler-from-desktop-shell.patch
+  + added.
+
+ -- Marius Vlad <Marius Vlad@collabora.com>  Wed, 24 Mar 2021 12:32:34 +0200
+
 weston (9.0.0-4~exp1ata7) vcs; urgency=medium
 
   * debian/patches/atari/0005-libweston-desktop-Allow-the-possibility-to-identify-.patch
