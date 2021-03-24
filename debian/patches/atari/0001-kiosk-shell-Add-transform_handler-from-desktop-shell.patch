@@ -1,0 +1,93 @@
+From 20016f432e17e5fa7c677de3380f141a8c343503 Mon Sep 17 00:00:00 2001
+From: Marius Vlad <marius.vlad@collabora.com>
+Date: Tue, 23 Mar 2021 15:55:00 +0200
+Subject: [PATCH] kiosk-shell: Add transform_handler from desktop-shell to
+ correctly position xwayland surfaces
+
+Signed-off-by: Marius Vlad <marius.vlad@collabora.com>
+---
+ kiosk-shell/kiosk-shell.c | 35 +++++++++++++++++++++++++++++++++++
+ kiosk-shell/kiosk-shell.h |  2 ++
+ 2 files changed, 37 insertions(+)
+
+diff --git a/kiosk-shell/kiosk-shell.c b/kiosk-shell/kiosk-shell.c
+index 4d8d7539..e4731195 100644
+--- a/kiosk-shell/kiosk-shell.c
++++ b/kiosk-shell/kiosk-shell.c
+@@ -37,6 +37,8 @@
+ #include "shared/helpers.h"
+ #include "util.h"
+ 
++#include <libweston/xwayland-api.h>
++
+ static struct kiosk_shell_surface *
+ get_kiosk_shell_surface(struct weston_surface *surface)
+ {
+@@ -105,6 +107,36 @@ kiosk_shell_surface_get_parent_root(struct kiosk_shell_surface *shsurf)
+ 	return root;
+ }
+ 
++static void
++transform_handler(struct wl_listener *listener, void *data)
++{
++	struct weston_surface *surface = data;
++	struct kiosk_shell_surface *shsurf = get_kiosk_shell_surface(surface);
++	const struct weston_xwayland_surface_api *api;
++	int x, y;
++
++	if (!shsurf)
++		return;
++
++	api = shsurf->shell->xwayland_surface_api;
++	if (!api) {
++		api = weston_xwayland_surface_get_api(shsurf->shell->compositor);
++		shsurf->shell->xwayland_surface_api = api;
++	}
++
++	if (!api || !api->is_xwayland_surface(surface))
++		return;
++
++	if (!weston_view_is_mapped(shsurf->view))
++		return;
++
++	x = shsurf->view->geometry.x;
++	y = shsurf->view->geometry.y;
++
++	api->send_position(surface, x, y);
++}
++
++
+ static bool
+ kiosk_shell_output_has_app_id(struct kiosk_shell_output *shoutput,
+ 			      const char *app_id);
+@@ -1115,6 +1147,9 @@ wet_shell_init(struct weston_compositor *ec,
+ 	shell->output_moved_listener.notify = kiosk_shell_handle_output_moved;
+ 	wl_signal_add(&ec->output_moved_signal, &shell->output_moved_listener);
+ 
++	shell->transform_listener.notify = transform_handler;
++	wl_signal_add(&ec->transform_signal, &shell->transform_listener);
++
+ 	screenshooter_create(ec);
+ 
+ 	kiosk_shell_add_bindings(shell);
+diff --git a/kiosk-shell/kiosk-shell.h b/kiosk-shell/kiosk-shell.h
+index 09f5a777..50e8c839 100644
+--- a/kiosk-shell/kiosk-shell.h
++++ b/kiosk-shell/kiosk-shell.h
+@@ -36,11 +36,13 @@ struct kiosk_shell {
+ 	struct wl_listener output_resized_listener;
+ 	struct wl_listener output_moved_listener;
+ 	struct wl_listener seat_created_listener;
++	struct wl_listener transform_listener;
+ 
+ 	struct weston_layer background_layer;
+ 	struct weston_layer normal_layer;
+ 
+ 	struct wl_list output_list;
++	const struct weston_xwayland_surface_api *xwayland_surface_api;
+ };
+ 
+ struct kiosk_shell_surface {
+-- 
+2.29.2
+
