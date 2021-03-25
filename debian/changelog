@@ -1,3 +1,64 @@
+weston (9.0.0-4~exp1ata8) vcs; urgency=medium
+
+  * debian/patches/atari/0001-kiosk-shell-Add-transform_handler-from-desktop-shell.patch
+  + added.
+
+ -- Marius Vlad <Marius Vlad@collabora.com>  Wed, 24 Mar 2021 12:32:34 +0200
+
+weston (9.0.0-4~exp1ata7) vcs; urgency=medium
+
+  * debian/patches/atari/0005-libweston-desktop-Allow-the-possibility-to-identify-.patch
+    + added.
+  * debian/patches/atari/0006-xwayland-internal-interface-Extract-weston_desktop.patch
+    + added.
+  * debian/patches/atari/0007-window-manager-Force-xwayland-surfaces-be-fullscreen.patch
+    + added.
+
+ -- Marius Vlad <marius.vlad@collabora.com>  Tue, 23 Mar 2021 11:07:31 +0200
+
+weston (9.0.0-4~exp1ata6) vcs; urgency=medium
+
+  * debian/patches/atari/0004-screenshooter-Allow-only-an-authorized-client-to-tak.patch
+    + added.
+
+ -- Marius Vlad <Marius Vlad@marius.vlad@collabora.com>  Tue, 23 Mar 2021 11:04:31 +0200
+
+weston (9.0.0-4~exp1ata5) vcs; urgency=medium
+
+  * debian/patches/atari/0003-kiosk-shell-Enable-screenshooter-in-kiosk-shell.patch
+    + added.
+
+ -- Marius Vlad <Marius Vlad@marius.vlad@collabora.com>  Tue, 23 Mar 2021 10:46:40 +0200
+
+weston (9.0.0-4~exp1ata4) vcs; urgency=medium
+
+  * debian/patches/atari/0002-kiosk-shell-add-keybinding-to-launch-in-game-menu.patch
+    + added.
+
+ -- Marius Vlad <marius.vlad@collabora.com>  Tue, 23 Mar 2021 10:44:38 +0200
+
+weston (9.0.0-4~exp1ata3) vcs; urgency=medium
+
+  * debian/patches/atari/Allow-weston-to-start-from-a-systemd-user-session.patch
+    + Added. Allow weston to run as a user service rather then a system
+      service.
+
+ -- Sjoerd Simons <sjoerd.simons@collabora.co.uk>  Tue, 17 Dec 2019 11:08:30 +0100
+
+weston (9.0.0-4~exp1ata2) vcs; urgency=medium
+
+  * debian/control: Disable rdp backend support
+
+ -- Sjoerd Simons <sjoerd.simons@collabora.co.uk>  Sun, 08 Dec 2019 10:36:13 +0100
+
+weston (9.0.0-4~exp1ata1) vcs; urgency=medium
+
+  [ Sjoerd Simons ]
+  * Add atari specific gitlab-yml.ci
+  * Use ci-package-builder yml from atari/vcs branch
+
+ -- Sjoerd Simons <sjoerd.simons@collabora.co.uk>  Sun, 08 Dec 2019 10:02:22 +0100
+
 weston (9.0.0-4) unstable; urgency=high
 
   * debian/rules: make tests non fatal

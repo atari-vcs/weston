@@ -1,0 +1,54 @@
+From d8be82d21048ebe7b15ab3df0cb3cb9435ecff9f Mon Sep 17 00:00:00 2001
+From: Marius Vlad <marius.vlad@collabora.com>
+Date: Sat, 20 Mar 2021 17:56:26 +0200
+Subject: [PATCH 6/7] xwayland-internal-interface: Extract weston_desktop
+
+As the structs are opaque this adds a getter function to extract
+weston_desktop from weston_desktop_xwayland struct.
+
+Signed-off-by: Marius Vlad <marius.vlad@collabora.com>
+---
+ libweston-desktop/xwayland.c           | 7 +++++++
+ xwayland/xwayland-internal-interface.h | 1 +
+ 2 files changed, 8 insertions(+)
+
+diff --git a/libweston-desktop/xwayland.c b/libweston-desktop/xwayland.c
+index 711c8a30..7eb75eb4 100644
+--- a/libweston-desktop/xwayland.c
++++ b/libweston-desktop/xwayland.c
+@@ -385,6 +385,12 @@ set_pid(struct weston_desktop_xwayland_surface *surface, pid_t pid)
+ 	weston_desktop_surface_set_pid(surface->surface, pid);
+ }
+ 
++static struct weston_desktop *
++get_weston_desktop(struct weston_desktop_xwayland *xwayland)
++{
++	return xwayland->desktop;
++}
++
+ static const struct weston_desktop_xwayland_interface weston_desktop_xwayland_interface = {
+ 	.create_surface = create_surface,
+ 	.set_toplevel = set_toplevel,
+@@ -399,6 +405,7 @@ static const struct weston_desktop_xwayland_interface weston_desktop_xwayland_in
+ 	.set_window_geometry = set_window_geometry,
+ 	.set_maximized = set_maximized,
+ 	.set_pid = set_pid,
++	.get_weston_desktop = get_weston_desktop,
+ };
+ 
+ void
+diff --git a/xwayland/xwayland-internal-interface.h b/xwayland/xwayland-internal-interface.h
+index 10964440..50225689 100644
+--- a/xwayland/xwayland-internal-interface.h
++++ b/xwayland/xwayland-internal-interface.h
+@@ -59,6 +59,7 @@ struct weston_desktop_xwayland_interface {
+ 				    int32_t width, int32_t height);
+ 	void (*set_maximized)(struct weston_desktop_xwayland_surface *shsurf);
+ 	void (*set_pid)(struct weston_desktop_xwayland_surface *shsurf, pid_t pid);
++	struct weston_desktop *(*get_weston_desktop)(struct weston_desktop_xwayland *xwayland);
+ };
+ 
+ #endif
+-- 
+2.29.2
+

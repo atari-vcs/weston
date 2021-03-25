@@ -1,0 +1,89 @@
+From f8d929beac5fdd2be5e5a1d0c0f18fb12f204459 Mon Sep 17 00:00:00 2001
+From: Marius Vlad <marius.vlad@collabora.com>
+Date: Fri, 19 Mar 2021 23:37:46 +0200
+Subject: [PATCH 2/7] kiosk-shell: add keybinding to launch in-game menu
+
+When Ctrl+Esc is pressed, show the in-game menu.
+
+Signed-off-by: Marius Vlad <marius.vlad@collabora.com>
+---
+ kiosk-shell/kiosk-shell.c | 49 +++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 49 insertions(+)
+
+diff --git a/kiosk-shell/kiosk-shell.c b/kiosk-shell/kiosk-shell.c
+index ac9c8684..02d1e152 100644
+--- a/kiosk-shell/kiosk-shell.c
++++ b/kiosk-shell/kiosk-shell.c
+@@ -28,6 +28,8 @@
+ #include <stdbool.h>
+ #include <stdint.h>
+ #include <string.h>
++#include <errno.h>
++#include <unistd.h>
+ 
+ #include "kiosk-shell.h"
+ #include "kiosk-shell-grab.h"
+@@ -907,6 +909,50 @@ kiosk_shell_touch_to_activate_binding(struct weston_touch *touch,
+ 				  WESTON_ACTIVATE_FLAG_NONE);
+ }
+ 
++static void
++atari_menu_cleanup(struct weston_process *proc, int status)
++{
++	weston_log("atari_menu_cleanup: process killed; status=%d\n", status);
++
++	free(proc);
++}
++
++static void
++atari_menu_binding(struct weston_keyboard *keyboard, const struct timespec *time,
++		uint32_t key, void *data)
++{
++	pid_t pid;
++	struct weston_process *proc;
++
++	weston_log("atari_menu_binding: show in-game menu\n");
++
++	proc = zalloc(sizeof(*proc));
++	if (!proc)
++		return;
++
++	pid = fork();
++	if (pid == -1) {
++		weston_log("atari_menu_binding: fork failed: %s\n",
++				strerror(errno));
++		return;
++	}
++
++	if (pid == 0) {
++		if (execl("/usr/bin/sbd-cli", "sbd-cli",
++					"--show-in-game-menu", NULL) < 0) {
++			weston_log("atari_menu_binding: exec failed: %s\n",
++					strerror(errno));
++		}
++		exit(-1);
++	}
++
++
++	proc->pid = pid;
++	proc->cleanup = atari_menu_cleanup;
++	weston_watch_process(proc);
++}
++
++
+ static void
+ kiosk_shell_add_bindings(struct kiosk_shell *shell)
+ {
+@@ -919,6 +965,9 @@ kiosk_shell_add_bindings(struct kiosk_shell *shell)
+ 	weston_compositor_add_touch_binding(shell->compositor, 0,
+ 					    kiosk_shell_touch_to_activate_binding,
+ 					    shell);
++	/* Atari VCS: keybinding to bring-up menu */
++	weston_compositor_add_key_binding(shell->compositor, KEY_ESC,
++			MODIFIER_CTRL, atari_menu_binding, shell->compositor);
+ }
+ 
+ static void
+-- 
+2.29.2
+

@@ -1,0 +1,8 @@
+atari/Allow-weston-to-start-from-a-systemd-user-session.patch
+atari/0002-kiosk-shell-add-keybinding-to-launch-in-game-menu.patch
+atari/0003-kiosk-shell-Enable-screenshooter-in-kiosk-shell.patch
+atari/0004-screenshooter-Allow-only-an-authorized-client-to-tak.patch
+atari/0005-libweston-desktop-Allow-the-possibility-to-identify-.patch
+atari/0006-xwayland-internal-interface-Extract-weston_desktop.patch
+atari/0007-window-manager-Force-xwayland-surfaces-be-fullscreen.patch
+atari/0001-kiosk-shell-Add-transform_handler-from-desktop-shell.patch

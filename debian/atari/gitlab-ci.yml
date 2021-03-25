@@ -1,0 +1,5 @@
+include:
+  - project: 'atari/ci-package-builder'
+    file: '/ci-package-builder.yml'
+    ref: 'atari/vcs'
+
