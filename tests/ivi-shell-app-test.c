@@ -30,16 +30,29 @@
 
 #include "weston-test-client-helper.h"
 #include "ivi-application-client-protocol.h"
+#include "weston-test-fixture-compositor.h"
+#include "test-config.h"
+
+static enum test_result_code
+fixture_setup(struct weston_test_harness *harness)
+{
+	struct compositor_setup setup;
+
+	compositor_setup_defaults(&setup);
+	setup.shell = SHELL_IVI;
+	setup.config_file = TESTSUITE_IVI_CONFIG_PATH;
+	setup.logging_scopes = "log,test-harness-plugin,proto";
+
+	return weston_test_harness_execute_as_client(harness, &setup);
+}
+DECLARE_FIXTURE_SETUP(fixture_setup);
 
 static struct ivi_application *
 get_ivi_application(struct client *client)
 {
 	struct global *g;
 	struct global *global_iviapp = NULL;
-	static struct ivi_application *iviapp;
-
-	if (iviapp)
-		return iviapp;
+	struct ivi_application *iviapp;
 
 	wl_list_for_each(g, &client->global_list, link) {
 		if (strcmp(g->interface, "ivi_application"))
@@ -71,5 +84,7 @@ TEST(ivi_application_exists)
 	iviapp = get_ivi_application(client);
 	client_roundtrip(client);
 
-	printf("Successful bind: %p\n", iviapp);
+	testlog("Successful bind: %p\n", iviapp);
+
+	client_destroy(client);
 }

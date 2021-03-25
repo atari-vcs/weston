@@ -29,8 +29,24 @@
 #include <stdio.h>
 
 #include "weston-test-client-helper.h"
+#include "weston-test-fixture-compositor.h"
+#include "test-config.h"
 
-char *server_parameters="--use-pixman --width=320 --height=240";
+static enum test_result_code
+fixture_setup(struct weston_test_harness *harness)
+{
+	struct compositor_setup setup;
+
+	compositor_setup_defaults(&setup);
+	setup.renderer = RENDERER_PIXMAN;
+	setup.width = 320;
+	setup.height = 240;
+	setup.shell = SHELL_DESKTOP;
+	setup.config_file = TESTSUITE_INTERNAL_SCREENSHOT_CONFIG_PATH;
+
+	return weston_test_harness_execute_as_client(harness, &setup);
+}
+DECLARE_FIXTURE_SETUP(fixture_setup);
 
 static void
 draw_stuff(pixman_image_t *image)
@@ -38,7 +54,7 @@ draw_stuff(pixman_image_t *image)
 	int w, h;
 	int stride; /* bytes */
 	int x, y;
-	uint8_t r, g, b;
+	uint32_t r, g, b;
 	uint32_t *pixels;
 	uint32_t *pixel;
 	pixman_format_code_t fmt;
@@ -57,7 +73,7 @@ draw_stuff(pixman_image_t *image)
 			g = x + y;
 			r = y;
 			pixel = pixels + (y * stride / 4) + x;
-			*pixel = (255 << 24) | (r << 16) | (g << 8) | b;
+			*pixel = (255U << 24) | (r << 16) | (g << 8) | b;
 		}
 }
 
@@ -76,7 +92,7 @@ TEST(internal_screenshot)
 	bool dump_all_images = true;
 
 	/* Create the client */
-	printf("Creating client for test\n");
+	testlog("Creating client for test\n");
 	client = create_client_and_test_surface(100, 100, 100, 100);
 	assert(client);
 	surface = client->surface->wl_surface;
@@ -106,27 +122,27 @@ TEST(internal_screenshot)
 	wl_surface_commit(surface);
 
 	/* Take a snapshot.  Result will be in screenshot->wl_buffer. */
-	printf("Taking a screenshot\n");
+	testlog("Taking a screenshot\n");
 	screenshot = capture_screenshot_of_output(client);
 	assert(screenshot);
 
 	/* Load good reference image */
 	fname = screenshot_reference_filename("internal-screenshot-good", 0);
-	printf("Loading good reference image %s\n", fname);
+	testlog("Loading good reference image %s\n", fname);
 	reference_good = load_image_from_png(fname);
 	assert(reference_good);
 
 	/* Load bad reference image */
 	fname = screenshot_reference_filename("internal-screenshot-bad", 0);
-	printf("Loading bad reference image %s\n", fname);
+	testlog("Loading bad reference image %s\n", fname);
 	reference_bad = load_image_from_png(fname);
 	assert(reference_bad);
 
 	/* Test check_images_match() without a clip.
 	 * We expect this to fail since we use a bad reference image
 	 */
-	match = check_images_match(screenshot->image, reference_bad, NULL);
-	printf("Screenshot %s reference image\n", match? "equal to" : "different from");
+	match = check_images_match(screenshot->image, reference_bad, NULL, NULL);
+	testlog("Screenshot %s reference image\n", match? "equal to" : "different from");
 	assert(!match);
 	pixman_image_unref(reference_bad);
 
@@ -138,11 +154,11 @@ TEST(internal_screenshot)
 	clip.y = 100;
 	clip.width = 100;
 	clip.height = 100;
-	printf("Clip: %d,%d %d x %d\n", clip.x, clip.y, clip.width, clip.height);
-	match = check_images_match(screenshot->image, reference_good, &clip);
-	printf("Screenshot %s reference image in clipped area\n", match? "matches" : "doesn't match");
+	testlog("Clip: %d,%d %d x %d\n", clip.x, clip.y, clip.width, clip.height);
+	match = check_images_match(screenshot->image, reference_good, &clip, NULL);
+	testlog("Screenshot %s reference image in clipped area\n", match? "matches" : "doesn't match");
 	if (!match) {
-		diffimg = visualize_image_difference(screenshot->image, reference_good, &clip);
+		diffimg = visualize_image_difference(screenshot->image, reference_good, &clip, NULL);
 		fname = screenshot_output_filename("internal-screenshot-error", 0);
 		write_image_as_png(diffimg, fname);
 		pixman_image_unref(diffimg);
@@ -157,6 +173,6 @@ TEST(internal_screenshot)
 
 	buffer_destroy(screenshot);
 
-	printf("Test complete\n");
+	testlog("Test complete\n");
 	assert(match);
 }

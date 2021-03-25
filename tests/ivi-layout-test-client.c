@@ -34,6 +34,20 @@
 #include "weston-test-client-helper.h"
 #include "ivi-application-client-protocol.h"
 #include "ivi-test.h"
+#include "weston-test-fixture-compositor.h"
+
+static enum test_result_code
+fixture_setup(struct weston_test_harness *harness)
+{
+	struct compositor_setup setup;
+
+	compositor_setup_defaults(&setup);
+	setup.shell = SHELL_IVI;
+	setup.extra_module = "test-ivi-layout.so";
+
+	return weston_test_harness_execute_as_client(harness, &setup);
+}
+DECLARE_FIXTURE_SETUP(fixture_setup);
 
 struct runner {
 	struct client *client;
@@ -99,7 +113,7 @@ runner_destroy(struct runner *runner)
 static void
 runner_run(struct runner *runner, const char *test_name)
 {
-	fprintf(stderr, "weston_test_runner.run(\"%s\")\n", test_name);
+	testlog("weston_test_runner.run(\"%s\")\n", test_name);
 
 	runner->done = 0;
 	weston_test_runner_run(runner->test_runner, test_name);
@@ -115,10 +129,7 @@ get_ivi_application(struct client *client)
 {
 	struct global *g;
 	struct global *global_iviapp = NULL;
-	static struct ivi_application *iviapp;
-
-	if (iviapp)
-		return iviapp;
+	struct ivi_application *iviapp;
 
 	wl_list_for_each(g, &client->global_list, link) {
 		if (strcmp(g->interface, "ivi_application"))
@@ -148,12 +159,11 @@ struct ivi_window {
 };
 
 static struct ivi_window *
-client_create_ivi_window(struct client *client, uint32_t ivi_id)
+client_create_ivi_window(struct client *client,
+			 struct ivi_application *iviapp,
+			 uint32_t ivi_id)
 {
-	struct ivi_application *iviapp;
 	struct ivi_window *wnd;
-
-	iviapp = get_ivi_application(client);
 
 	wnd = xzalloc(sizeof(*wnd));
 	wnd->wl_surface = wl_compositor_create_surface(client->wl_compositor);
@@ -175,9 +185,6 @@ ivi_window_destroy(struct ivi_window *wnd)
 /******************************** tests ********************************/
 
 /*
- * This is a test program, launched by ivi-layout-test-plugin.c. Each TEST()
- * is forked and exec'd as usual with the weston-test-runner framework.
- *
  * These tests make use of weston_test_runner global interface exposed by
  * ivi-layout-test-plugin.c. This allows these tests to trigger compositor-side
  * checks.
@@ -221,12 +228,14 @@ TEST_P(ivi_layout_runner, basic_test_names)
 	const char * const *test_name = data;
 	struct client *client;
 	struct runner *runner;
+	struct ivi_application *iviapp;
 	struct ivi_window *wnd;
 
 	client = create_client();
 	runner = client_create_runner(client);
+	iviapp = get_ivi_application(client);
 
-	wnd = client_create_ivi_window(client, IVI_TEST_SURFACE_ID(0));
+	wnd = client_create_ivi_window(client, iviapp, IVI_TEST_SURFACE_ID(0));
 
 	runner_run(runner, *test_name);
 
@@ -238,13 +247,17 @@ TEST(ivi_layout_surface_create)
 {
 	struct client *client;
 	struct runner *runner;
+	struct ivi_application *iviapp;
 	struct ivi_window *winds[2];
 
 	client = create_client();
 	runner = client_create_runner(client);
+	iviapp = get_ivi_application(client);
 
-	winds[0] = client_create_ivi_window(client, IVI_TEST_SURFACE_ID(0));
-	winds[1] = client_create_ivi_window(client, IVI_TEST_SURFACE_ID(1));
+	winds[0] = client_create_ivi_window(client, iviapp,
+					    IVI_TEST_SURFACE_ID(0));
+	winds[1] = client_create_ivi_window(client, iviapp,
+					    IVI_TEST_SURFACE_ID(1));
 
 	runner_run(runner, "surface_create_p1");
 
@@ -262,12 +275,14 @@ TEST_P(commit_changes_after_properties_set_surface_destroy, surface_property_com
 	const char * const *test_name = data;
 	struct client *client;
 	struct runner *runner;
+	struct ivi_application *iviapp;
 	struct ivi_window *wnd;
 
 	client = create_client();
 	runner = client_create_runner(client);
+	iviapp = get_ivi_application(client);
 
-	wnd = client_create_ivi_window(client, IVI_TEST_SURFACE_ID(0));
+	wnd = client_create_ivi_window(client, iviapp, IVI_TEST_SURFACE_ID(0));
 
 	runner_run(runner, *test_name);
 
@@ -282,12 +297,14 @@ TEST(get_surface_after_destroy_ivi_surface)
 {
 	struct client *client;
 	struct runner *runner;
+	struct ivi_application *iviapp;
 	struct ivi_window *wnd;
 
 	client = create_client();
 	runner = client_create_runner(client);
+	iviapp = get_ivi_application(client);
 
-	wnd = client_create_ivi_window(client, IVI_TEST_SURFACE_ID(0));
+	wnd = client_create_ivi_window(client, iviapp, IVI_TEST_SURFACE_ID(0));
 
 	ivi_surface_destroy(wnd->ivi_surface);
 
@@ -302,12 +319,14 @@ TEST(get_surface_after_destroy_wl_surface)
 {
 	struct client *client;
 	struct runner *runner;
+	struct ivi_application *iviapp;
 	struct ivi_window *wnd;
 
 	client = create_client();
 	runner = client_create_runner(client);
+	iviapp = get_ivi_application(client);
 
-	wnd = client_create_ivi_window(client, IVI_TEST_SURFACE_ID(0));
+	wnd = client_create_ivi_window(client, iviapp, IVI_TEST_SURFACE_ID(0));
 
 	wl_surface_destroy(wnd->wl_surface);
 
@@ -324,14 +343,19 @@ TEST_P(ivi_layout_layer_render_order_runner, render_order_test_names)
 	const char * const *test_name = data;
 	struct client *client;
 	struct runner *runner;
+	struct ivi_application *iviapp;
 	struct ivi_window *winds[3];
 
 	client = create_client();
 	runner = client_create_runner(client);
+	iviapp = get_ivi_application(client);
 
-	winds[0] = client_create_ivi_window(client, IVI_TEST_SURFACE_ID(0));
-	winds[1] = client_create_ivi_window(client, IVI_TEST_SURFACE_ID(1));
-	winds[2] = client_create_ivi_window(client, IVI_TEST_SURFACE_ID(2));
+	winds[0] = client_create_ivi_window(client, iviapp,
+					    IVI_TEST_SURFACE_ID(0));
+	winds[1] = client_create_ivi_window(client, iviapp,
+					    IVI_TEST_SURFACE_ID(1));
+	winds[2] = client_create_ivi_window(client, iviapp,
+					    IVI_TEST_SURFACE_ID(2));
 
 	runner_run(runner, *test_name);
 
@@ -345,14 +369,19 @@ TEST(destroy_surface_after_layer_render_order)
 {
 	struct client *client;
 	struct runner *runner;
+	struct ivi_application *iviapp;
 	struct ivi_window *winds[3];
 
 	client = create_client();
 	runner = client_create_runner(client);
+	iviapp = get_ivi_application(client);
 
-	winds[0] = client_create_ivi_window(client, IVI_TEST_SURFACE_ID(0));
-	winds[1] = client_create_ivi_window(client, IVI_TEST_SURFACE_ID(1));
-	winds[2] = client_create_ivi_window(client, IVI_TEST_SURFACE_ID(2));
+	winds[0] = client_create_ivi_window(client, iviapp,
+					    IVI_TEST_SURFACE_ID(0));
+	winds[1] = client_create_ivi_window(client, iviapp,
+					    IVI_TEST_SURFACE_ID(1));
+	winds[2] = client_create_ivi_window(client, iviapp,
+					    IVI_TEST_SURFACE_ID(2));
 
 	runner_run(runner, "test_layer_render_order_destroy_one_surface_p1");
 
@@ -369,14 +398,19 @@ TEST(commit_changes_after_render_order_set_surface_destroy)
 {
 	struct client *client;
 	struct runner *runner;
+	struct ivi_application *iviapp;
 	struct ivi_window *winds[3];
 
 	client = create_client();
 	runner = client_create_runner(client);
+	iviapp = get_ivi_application(client);
 
-	winds[0] = client_create_ivi_window(client, IVI_TEST_SURFACE_ID(0));
-	winds[1] = client_create_ivi_window(client, IVI_TEST_SURFACE_ID(1));
-	winds[2] = client_create_ivi_window(client, IVI_TEST_SURFACE_ID(2));
+	winds[0] = client_create_ivi_window(client, iviapp,
+					    IVI_TEST_SURFACE_ID(0));
+	winds[1] = client_create_ivi_window(client, iviapp,
+					    IVI_TEST_SURFACE_ID(1));
+	winds[2] = client_create_ivi_window(client, iviapp,
+					    IVI_TEST_SURFACE_ID(2));
 
 	runner_run(runner, "commit_changes_after_render_order_set_surface_destroy");
 
@@ -394,15 +428,17 @@ TEST(ivi_layout_surface_configure_notification)
 {
 	struct client *client;
 	struct runner *runner;
+	struct ivi_application *iviapp;
 	struct ivi_window *wind;
 	struct buffer *buffer;
 
 	client = create_client();
 	runner = client_create_runner(client);
+	iviapp = get_ivi_application(client);
 
 	runner_run(runner, "surface_configure_notification_p1");
 
-	wind = client_create_ivi_window(client, IVI_TEST_SURFACE_ID(0));
+	wind = client_create_ivi_window(client, iviapp, IVI_TEST_SURFACE_ID(0));
 
 	buffer = create_shm_buffer_a8r8g8b8(client, 200, 300);
 
@@ -427,19 +463,21 @@ TEST(ivi_layout_surface_create_notification)
 {
 	struct client *client;
 	struct runner *runner;
+	struct ivi_application *iviapp;
 	struct ivi_window *wind;
 
 	client = create_client();
 	runner = client_create_runner(client);
+	iviapp = get_ivi_application(client);
 
 	runner_run(runner, "surface_create_notification_p1");
 
-	wind = client_create_ivi_window(client, IVI_TEST_SURFACE_ID(0));
+	wind = client_create_ivi_window(client, iviapp, IVI_TEST_SURFACE_ID(0));
 
 	runner_run(runner, "surface_create_notification_p2");
 
 	ivi_window_destroy(wind);
-	wind = client_create_ivi_window(client, IVI_TEST_SURFACE_ID(0));
+	wind = client_create_ivi_window(client, iviapp, IVI_TEST_SURFACE_ID(0));
 	runner_run(runner, "surface_create_notification_p3");
 
 	ivi_window_destroy(wind);
@@ -450,18 +488,20 @@ TEST(ivi_layout_surface_remove_notification)
 {
 	struct client *client;
 	struct runner *runner;
+	struct ivi_application *iviapp;
 	struct ivi_window *wind;
 
 	client = create_client();
 	runner = client_create_runner(client);
+	iviapp = get_ivi_application(client);
 
-	wind = client_create_ivi_window(client, IVI_TEST_SURFACE_ID(0));
+	wind = client_create_ivi_window(client, iviapp, IVI_TEST_SURFACE_ID(0));
 	runner_run(runner, "surface_remove_notification_p1");
 	ivi_window_destroy(wind);
 
 	runner_run(runner, "surface_remove_notification_p2");
 
-	wind = client_create_ivi_window(client, IVI_TEST_SURFACE_ID(0));
+	wind = client_create_ivi_window(client, iviapp, IVI_TEST_SURFACE_ID(0));
 	ivi_window_destroy(wind);
 	runner_run(runner, "surface_remove_notification_p3");
 

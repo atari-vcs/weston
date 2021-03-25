@@ -31,6 +31,18 @@
 
 #include "weston-test-client-helper.h"
 #include "text-input-unstable-v1-client-protocol.h"
+#include "weston-test-fixture-compositor.h"
+
+static enum test_result_code
+fixture_setup(struct weston_test_harness *harness)
+{
+	struct compositor_setup setup;
+
+	compositor_setup_defaults(&setup);
+
+	return weston_test_harness_execute_as_client(harness, &setup);
+}
+DECLARE_FIXTURE_SETUP(fixture_setup);
 
 struct text_input_state {
 	int activated;
@@ -112,7 +124,7 @@ text_input_enter(void *data,
 {
 	struct text_input_state *state = data;
 
-	fprintf(stderr, "%s\n", __FUNCTION__);
+	testlog("%s\n", __FUNCTION__);
 
 	state->activated += 1;
 }

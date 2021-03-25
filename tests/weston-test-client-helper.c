@@ -1,5 +1,7 @@
 /*
  * Copyright © 2012 Intel Corporation
+ * Copyright © 2015 Samsung Electronics Co., Ltd
+ * Copyright 2016, 2017 Collabora, Ltd.
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
@@ -34,6 +36,7 @@
 #include <sys/mman.h>
 #include <cairo.h>
 
+#include "test-config.h"
 #include "shared/os-compatibility.h"
 #include "shared/xalloc.h"
 #include <libweston/zalloc.h>
@@ -130,7 +133,7 @@ pointer_handle_enter(void *data, struct wl_pointer *wl_pointer,
 	pointer->x = wl_fixed_to_int(x);
 	pointer->y = wl_fixed_to_int(y);
 
-	fprintf(stderr, "test-client: got pointer enter %d %d, surface %p\n",
+	testlog("test-client: got pointer enter %d %d, surface %p\n",
 		pointer->x, pointer->y, pointer->focus);
 }
 
@@ -142,7 +145,7 @@ pointer_handle_leave(void *data, struct wl_pointer *wl_pointer,
 
 	pointer->focus = NULL;
 
-	fprintf(stderr, "test-client: got pointer leave, surface %p\n",
+	testlog("test-client: got pointer leave, surface %p\n",
 		wl_surface ? wl_surface_get_user_data(wl_surface) : NULL);
 }
 
@@ -158,7 +161,7 @@ pointer_handle_motion(void *data, struct wl_pointer *wl_pointer,
 	pointer->motion_time_timespec = pointer->input_timestamp;
 	pointer->input_timestamp = (struct timespec) { 0 };
 
-	fprintf(stderr, "test-client: got pointer motion %d %d\n",
+	testlog("test-client: got pointer motion %d %d\n",
 		pointer->x, pointer->y);
 }
 
@@ -175,8 +178,7 @@ pointer_handle_button(void *data, struct wl_pointer *wl_pointer,
 	pointer->button_time_timespec = pointer->input_timestamp;
 	pointer->input_timestamp = (struct timespec) { 0 };
 
-	fprintf(stderr, "test-client: got pointer button %u %u\n",
-		button, state);
+	testlog("test-client: got pointer button %u %u\n", button, state);
 }
 
 static void
@@ -191,21 +193,21 @@ pointer_handle_axis(void *data, struct wl_pointer *wl_pointer,
 	pointer->axis_time_timespec = pointer->input_timestamp;
 	pointer->input_timestamp = (struct timespec) { 0 };
 
-	fprintf(stderr, "test-client: got pointer axis %u %f\n",
+	testlog("test-client: got pointer axis %u %f\n",
 		axis, wl_fixed_to_double(value));
 }
 
 static void
 pointer_handle_frame(void *data, struct wl_pointer *wl_pointer)
 {
-	fprintf(stderr, "test-client: got pointer frame\n");
+	testlog("test-client: got pointer frame\n");
 }
 
 static void
 pointer_handle_axis_source(void *data, struct wl_pointer *wl_pointer,
 			     uint32_t source)
 {
-	fprintf(stderr, "test-client: got pointer axis source %u\n", source);
+	testlog("test-client: got pointer axis source %u\n", source);
 }
 
 static void
@@ -219,15 +221,14 @@ pointer_handle_axis_stop(void *data, struct wl_pointer *wl_pointer,
 	pointer->axis_stop_time_timespec = pointer->input_timestamp;
 	pointer->input_timestamp = (struct timespec) { 0 };
 
-	fprintf(stderr, "test-client: got pointer axis stop %u\n", axis);
+	testlog("test-client: got pointer axis stop %u\n", axis);
 }
 
 static void
 pointer_handle_axis_discrete(void *data, struct wl_pointer *wl_pointer,
 			     uint32_t axis, int32_t value)
 {
-	fprintf(stderr, "test-client: got pointer axis discrete %u %d\n",
-		axis, value);
+	testlog("test-client: got pointer axis discrete %u %d\n", axis, value);
 }
 
 static const struct wl_pointer_listener pointer_listener = {
@@ -248,7 +249,7 @@ keyboard_handle_keymap(void *data, struct wl_keyboard *wl_keyboard,
 {
 	close(fd);
 
-	fprintf(stderr, "test-client: got keyboard keymap\n");
+	testlog("test-client: got keyboard keymap\n");
 }
 
 static void
@@ -263,7 +264,7 @@ keyboard_handle_enter(void *data, struct wl_keyboard *wl_keyboard,
 	else
 		keyboard->focus = NULL;
 
-	fprintf(stderr, "test-client: got keyboard enter, surface %p\n",
+	testlog("test-client: got keyboard enter, surface %p\n",
 		keyboard->focus);
 }
 
@@ -275,7 +276,7 @@ keyboard_handle_leave(void *data, struct wl_keyboard *wl_keyboard,
 
 	keyboard->focus = NULL;
 
-	fprintf(stderr, "test-client: got keyboard leave, surface %p\n",
+	testlog("test-client: got keyboard leave, surface %p\n",
 		wl_surface ? wl_surface_get_user_data(wl_surface) : NULL);
 }
 
@@ -292,7 +293,7 @@ keyboard_handle_key(void *data, struct wl_keyboard *wl_keyboard,
 	keyboard->key_time_timespec = keyboard->input_timestamp;
 	keyboard->input_timestamp = (struct timespec) { 0 };
 
-	fprintf(stderr, "test-client: got keyboard key %u %u\n", key, state);
+	testlog("test-client: got keyboard key %u %u\n", key, state);
 }
 
 static void
@@ -308,7 +309,7 @@ keyboard_handle_modifiers(void *data, struct wl_keyboard *wl_keyboard,
 	keyboard->mods_locked = mods_locked;
 	keyboard->group = group;
 
-	fprintf(stderr, "test-client: got keyboard modifiers %u %u %u %u\n",
+	testlog("test-client: got keyboard modifiers %u %u %u %u\n",
 		mods_depressed, mods_latched, mods_locked, group);
 }
 
@@ -321,8 +322,7 @@ keyboard_handle_repeat_info(void *data, struct wl_keyboard *wl_keyboard,
 	keyboard->repeat_info.rate = rate;
 	keyboard->repeat_info.delay = delay;
 
-	fprintf(stderr, "test-client: got keyboard repeat_info %d %d\n",
-		rate, delay);
+	testlog("test-client: got keyboard repeat_info %d %d\n", rate, delay);
 }
 
 static const struct wl_keyboard_listener keyboard_listener = {
@@ -349,7 +349,7 @@ touch_handle_down(void *data, struct wl_touch *wl_touch,
 	touch->down_time_timespec = touch->input_timestamp;
 	touch->input_timestamp = (struct timespec) { 0 };
 
-	fprintf(stderr, "test-client: got touch down %d %d, surf: %p, id: %d\n",
+	testlog("test-client: got touch down %d %d, surf: %p, id: %d\n",
 		touch->down_x, touch->down_y, surface, id);
 }
 
@@ -363,7 +363,7 @@ touch_handle_up(void *data, struct wl_touch *wl_touch,
 	touch->up_time_timespec = touch->input_timestamp;
 	touch->input_timestamp = (struct timespec) { 0 };
 
-	fprintf(stderr, "test-client: got touch up, id: %d\n", id);
+	testlog("test-client: got touch up, id: %d\n", id);
 }
 
 static void
@@ -378,7 +378,7 @@ touch_handle_motion(void *data, struct wl_touch *wl_touch,
 	touch->motion_time_timespec = touch->input_timestamp;
 	touch->input_timestamp = (struct timespec) { 0 };
 
-	fprintf(stderr, "test-client: got touch motion, %d %d, id: %d\n",
+	testlog("test-client: got touch motion, %d %d, id: %d\n",
 		touch->x, touch->y, id);
 }
 
@@ -389,7 +389,7 @@ touch_handle_frame(void *data, struct wl_touch *wl_touch)
 
 	++touch->frame_no;
 
-	fprintf(stderr, "test-client: got touch frame (%d)\n", touch->frame_no);
+	testlog("test-client: got touch frame (%d)\n", touch->frame_no);
 }
 
 static void
@@ -399,7 +399,7 @@ touch_handle_cancel(void *data, struct wl_touch *wl_touch)
 
 	++touch->cancel_no;
 
-	fprintf(stderr, "test-client: got touch cancel (%d)\n", touch->cancel_no);
+	testlog("test-client: got touch cancel (%d)\n", touch->cancel_no);
 }
 
 static const struct wl_touch_listener touch_listener = {
@@ -418,8 +418,7 @@ surface_enter(void *data,
 
 	surface->output = wl_output_get_user_data(output);
 
-	fprintf(stderr, "test-client: got surface enter output %p\n",
-		surface->output);
+	testlog("test-client: got surface enter output %p\n", surface->output);
 }
 
 static void
@@ -430,7 +429,7 @@ surface_leave(void *data,
 
 	surface->output = NULL;
 
-	fprintf(stderr, "test-client: got surface leave output %p\n",
+	testlog("test-client: got surface leave output %p\n",
 		wl_output_get_user_data(output));
 }
 
@@ -536,7 +535,7 @@ test_handle_pointer_position(void *data, struct weston_test *weston_test,
 	test->pointer_x = wl_fixed_to_int(x);
 	test->pointer_y = wl_fixed_to_int(y);
 
-	fprintf(stderr, "test-client: got global pointer %d %d\n",
+	testlog("test-client: got global pointer %d %d\n",
 		test->pointer_x, test->pointer_y);
 }
 
@@ -545,7 +544,7 @@ test_handle_capture_screenshot_done(void *data, struct weston_test *weston_test)
 {
 	struct test *test = data;
 
-	printf("Screenshot has been captured\n");
+	testlog("Screenshot has been captured\n");
 	test->buffer_copy_done = 1;
 }
 
@@ -639,8 +638,7 @@ seat_handle_capabilities(void *data, struct wl_seat *seat,
 	if (input->seat_name && strcmp(input->seat_name, "test-seat") == 0)
 		input_update_devices(input);
 
-	fprintf(stderr, "test-client: got seat %p capabilities: %x\n",
-		input, caps);
+	testlog("test-client: got seat %p capabilities: %x\n", input, caps);
 }
 
 static void
@@ -660,8 +658,7 @@ seat_handle_name(void *data, struct wl_seat *seat, const char *name)
 		input->client->input = input;
 	}
 
-	fprintf(stderr, "test-client: got seat %p name: \'%s\'\n",
-		input, name);
+	testlog("test-client: got seat %p name: \'%s\'\n", input, name);
 }
 
 static const struct wl_seat_listener seat_listener = {
@@ -729,6 +726,15 @@ static const struct wl_output_listener output_listener = {
 };
 
 static void
+output_destroy(struct output *output)
+{
+	assert(wl_proxy_get_version((struct wl_proxy *)output->wl_output) >= 3);
+	wl_output_release(output->wl_output);
+	wl_list_remove(&output->link);
+	free(output);
+}
+
+static void
 handle_global(void *data, struct wl_registry *registry,
 	      uint32_t id, const char *interface, uint32_t version)
 {
@@ -744,6 +750,13 @@ handle_global(void *data, struct wl_registry *registry,
 	assert(interface);
 	global->version = version;
 	wl_list_insert(client->global_list.prev, &global->link);
+
+	/* We deliberately bind all globals with the maximum (advertised)
+	 * version, because this test suite must be kept up-to-date with
+	 * Weston. We must always implement at least the version advertised
+	 * by Weston. This is not ok for normal clients, but it is ok in
+	 * this test suite.
+	 */
 
 	if (strcmp(interface, "wl_compositor") == 0) {
 		client->wl_compositor =
@@ -770,6 +783,7 @@ handle_global(void *data, struct wl_registry *registry,
 					 &wl_output_interface, version);
 		wl_output_add_listener(output->wl_output,
 				       &output_listener, output);
+		wl_list_insert(&client->output_list, &output->link);
 		client->output = output;
 	} else if (strcmp(interface, "weston_test") == 0) {
 		test = xzalloc(sizeof *test);
@@ -810,6 +824,14 @@ client_find_input_with_name(struct client *client, uint32_t name)
 }
 
 static void
+global_destroy(struct global *global)
+{
+	wl_list_remove(&global->link);
+	free(global->interface);
+	free(global);
+}
+
+static void
 handle_global_remove(void *data, struct wl_registry *registry, uint32_t name)
 {
 	struct client *client = data;
@@ -828,9 +850,9 @@ handle_global_remove(void *data, struct wl_registry *registry, uint32_t name)
 		}
 	}
 
-	wl_list_remove(&global->link);
-	free(global->interface);
-	free(global);
+	/* XXX: handle wl_output */
+
+	global_destroy(global);
 }
 
 static const struct wl_registry_listener registry_listener = {
@@ -877,8 +899,7 @@ expect_protocol_error(struct client *client,
 
 	/* check error */
 	if (errcode != code) {
-		fprintf(stderr, "Should get error code %d but got %d\n",
-			code, errcode);
+		testlog("Should get error code %d but got %d\n", code, errcode);
 		failed = 1;
 	}
 
@@ -886,19 +907,19 @@ expect_protocol_error(struct client *client,
 	assert(interface);
 
 	if (strcmp(intf->name, interface->name) != 0) {
-		fprintf(stderr, "Should get interface '%s' but got '%s'\n",
+		testlog("Should get interface '%s' but got '%s'\n",
 			intf->name, interface->name);
 		failed = 1;
 	}
 
 	if (failed) {
-		fprintf(stderr, "Expected other protocol error\n");
+		testlog("Expected other protocol error\n");
 		abort();
 	}
 
 	/* all OK */
-	fprintf(stderr, "Got expected protocol error on '%s' (object id: %d) "
-			"with code %d\n", interface->name, id, errcode);
+	testlog("Got expected protocol error on '%s' (object id: %d) "
+		"with code %d\n", interface->name, id, errcode);
 }
 
 static void
@@ -921,6 +942,7 @@ create_client(void)
 	assert(client->wl_display);
 	wl_list_init(&client->global_list);
 	wl_list_init(&client->inputs);
+	wl_list_init(&client->output_list);
 
 	/* setup registry so we can bind to interfaces */
 	client->wl_registry = wl_display_get_registry(client->wl_display);
@@ -970,6 +992,16 @@ create_test_surface(struct client *client)
 	return surface;
 }
 
+void
+surface_destroy(struct surface *surface)
+{
+	if (surface->wl_surface)
+		wl_surface_destroy(surface->wl_surface);
+	if (surface->buffer)
+		buffer_destroy(surface->buffer);
+	free(surface);
+}
+
 struct client *
 create_client_and_test_surface(int x, int y, int width, int height)
 {
@@ -1004,13 +1036,53 @@ create_client_and_test_surface(int x, int y, int width, int height)
 	return client;
 }
 
+void
+client_destroy(struct client *client)
+{
+	if (client->surface)
+		surface_destroy(client->surface);
+
+	while (!wl_list_empty(&client->inputs)) {
+		input_destroy(container_of(client->inputs.next,
+					   struct input, link));
+	}
+
+	while (!wl_list_empty(&client->output_list)) {
+		output_destroy(container_of(client->output_list.next,
+					    struct output, link));
+	}
+
+	while (!wl_list_empty(&client->global_list)) {
+		global_destroy(container_of(client->global_list.next,
+					    struct global, link));
+	}
+
+	if (client->test) {
+		weston_test_destroy(client->test->weston_test);
+		free(client->test);
+	}
+
+	if (client->wl_shm)
+		wl_shm_destroy(client->wl_shm);
+	if (client->wl_compositor)
+		wl_compositor_destroy(client->wl_compositor);
+	if (client->wl_registry)
+		wl_registry_destroy(client->wl_registry);
+
+	client_roundtrip(client);
+
+	if (client->wl_display)
+		wl_display_disconnect(client->wl_display);
+	free(client);
+}
+
 static const char*
 output_path(void)
 {
 	char *path = getenv("WESTON_TEST_OUTPUT_PATH");
 
 	if (!path)
-		return "./logs";
+		return ".";
 
 	return path;
 }
@@ -1032,7 +1104,7 @@ reference_path(void)
 	char *path = getenv("WESTON_TEST_REFERENCE_PATH");
 
 	if (!path)
-		return "./tests/reference";
+		return WESTON_TEST_REFERENCE_PATH;
 	return path;
 }
 
@@ -1044,6 +1116,16 @@ screenshot_reference_filename(const char *basename, uint32_t seq)
 	if (asprintf(&filename, "%s/%s-%02d.png",
 				 reference_path(), basename, seq) < 0)
 		return NULL;
+	return filename;
+}
+
+char *
+image_filename(const char *basename)
+{
+	char *filename;
+
+	if (asprintf(&filename, "%s/%s.png", reference_path(), basename) < 0)
+		assert(0);
 	return filename;
 }
 
@@ -1081,6 +1163,24 @@ format_pixman2cairo(pixman_format_code_t fmt)
 			return format_map[i].cairo;
 
 	assert(0 && "unknown Pixman pixel format");
+}
+
+/**
+ * Validate range
+ *
+ * \param r Range to validate or NULL.
+ * \return The given range, or {0, 0} for NULL.
+ *
+ * Will abort if range is invalid, that is a > b.
+ */
+static struct range
+range_get(const struct range *r)
+{
+	if (!r)
+		return (struct range){ 0, 0 };
+
+	assert(r->a <= r->b);
+	return *r;
 }
 
 /**
@@ -1163,8 +1263,51 @@ image_iter_get_row(struct image_iterator *it, int y)
 	return (uint32_t *)(it->data + y * it->stride);
 }
 
+struct pixel_diff_stat {
+	struct pixel_diff_stat_channel {
+		int min_diff;
+		int max_diff;
+	} ch[4];
+};
+
+static void
+testlog_pixel_diff_stat(const struct pixel_diff_stat *stat)
+{
+	int i;
+
+	testlog("Image difference statistics:\n");
+	for (i = 0; i < 4; i++) {
+		testlog("\tch %d: [%d, %d]\n",
+			i, stat->ch[i].min_diff, stat->ch[i].max_diff);
+	}
+}
+
+static bool
+fuzzy_match_pixels(uint32_t pix_a, uint32_t pix_b,
+		   const struct range *fuzz,
+		   struct pixel_diff_stat *stat)
+{
+	bool ret = true;
+	int shift;
+	int i;
+
+	for (shift = 0, i = 0; i < 4; shift += 8, i++) {
+		int val_a = (pix_a >> shift) & 0xffu;
+		int val_b = (pix_b >> shift) & 0xffu;
+		int d = val_b - val_a;
+
+		stat->ch[i].min_diff = min(stat->ch[i].min_diff, d);
+		stat->ch[i].max_diff = max(stat->ch[i].max_diff, d);
+
+		if (d < fuzz->a || d > fuzz->b)
+			ret = false;
+	}
+
+	return ret;
+}
+
 /**
- * Test if a given region within two images are pixel-identical.
+ * Test if a given region within two images are pixel-identical
  *
  * Returns true if the two images pixel-wise identical, and false otherwise.
  *
@@ -1172,15 +1315,24 @@ image_iter_get_row(struct image_iterator *it, int y)
  * \param img_b Second image.
  * \param clip_rect The region of interest, or NULL for comparing the whole
  * images.
+ * \param prec Per-channel allowed difference, or NULL for identical match
+ * required.
  *
  * This function hard-fails if clip_rect is not inside both images. If clip_rect
  * is given, the images do not have to match in size, otherwise size mismatch
  * will be a hard failure.
+ *
+ * The per-pixel, per-channel difference is computed as img_b - img_a which is
+ * required to be in the range [prec->a, prec->b] inclusive. The difference is
+ * signed. All four channels are compared the same way, without any special
+ * meaning on alpha channel.
  */
 bool
 check_images_match(pixman_image_t *img_a, pixman_image_t *img_b,
-		   const struct rectangle *clip_rect)
+		   const struct rectangle *clip_rect, const struct range *prec)
 {
+	struct range fuzz = range_get(prec);
+	struct pixel_diff_stat diffstat = {};
 	struct image_iterator it_a;
 	struct image_iterator it_b;
 	pixman_box32_t box;
@@ -1198,7 +1350,8 @@ check_images_match(pixman_image_t *img_a, pixman_image_t *img_b,
 		pix_b = image_iter_get_row(&it_b, y) + box.x1;
 
 		for (x = box.x1; x < box.x2; x++) {
-			if (*pix_a != *pix_b)
+			if (!fuzzy_match_pixels(*pix_a, *pix_b,
+						&fuzz, &diffstat))
 				return false;
 
 			pix_a++;
@@ -1238,6 +1391,8 @@ tint(uint32_t src, uint32_t add)
  * \param img_b Second image.
  * \param clip_rect The region of interest, or NULL for comparing the whole
  * images.
+ * \param prec Per-channel allowed difference, or NULL for identical match
+ * required.
  * \return A new image with the differences highlighted.
  *
  * Regions outside of the region of interest are shaded with black, matching
@@ -1247,11 +1402,19 @@ tint(uint32_t src, uint32_t add)
  * This function hard-fails if clip_rect is not inside both images. If clip_rect
  * is given, the images do not have to match in size, otherwise size mismatch
  * will be a hard failure.
+ *
+ * The per-pixel, per-channel difference is computed as img_b - img_a which is
+ * required to be in the range [prec->a, prec->b] inclusive. The difference is
+ * signed. All four channels are compared the same way, without any special
+ * meaning on alpha channel.
  */
 pixman_image_t *
 visualize_image_difference(pixman_image_t *img_a, pixman_image_t *img_b,
-			   const struct rectangle *clip_rect)
+			   const struct rectangle *clip_rect,
+			   const struct range *prec)
 {
+	struct range fuzz = range_get(prec);
+	struct pixel_diff_stat diffstat = {};
 	pixman_image_t *diffimg;
 	pixman_image_t *shade;
 	struct image_iterator it_a;
@@ -1294,7 +1457,8 @@ visualize_image_difference(pixman_image_t *img_a, pixman_image_t *img_b,
 		pix_d = image_iter_get_row(&it_d, y) + box.x1;
 
 		for (x = box.x1; x < box.x2; x++) {
-			if (*pix_a == *pix_b)
+			if (fuzzy_match_pixels(*pix_a, *pix_b,
+					       &fuzz, &diffstat))
 				*pix_d = tint(*pix_d, 0x00008000); /* green */
 			else
 				*pix_d = tint(*pix_d, 0x00c00000); /* red */
@@ -1304,6 +1468,8 @@ visualize_image_difference(pixman_image_t *img_a, pixman_image_t *img_b,
 			pix_d++;
 		}
 	}
+
+	testlog_pixel_diff_stat(&diffstat);
 
 	return diffimg;
 }
@@ -1337,7 +1503,7 @@ write_image_as_png(pixman_image_t *image, const char *fname)
 
 	status = cairo_surface_write_to_png(cairo_surface, fname);
 	if (status != CAIRO_STATUS_SUCCESS) {
-		fprintf(stderr, "Failed to save image '%s': %s\n", fname,
+		testlog("Failed to save image '%s': %s\n", fname,
 			cairo_status_to_string(status));
 
 		return false;
@@ -1407,7 +1573,8 @@ load_image_from_png(const char *fname)
 	cairo_surface_flush(reference_cairo_surface);
 	status = cairo_surface_status(reference_cairo_surface);
 	if (status != CAIRO_STATUS_SUCCESS) {
-		printf("Could not open %s: %s\n", fname, cairo_status_to_string(status));
+		testlog("Could not open %s: %s\n", fname,
+			cairo_status_to_string(status));
 		cairo_surface_destroy(reference_cairo_surface);
 		return NULL;
 	}
@@ -1468,4 +1635,265 @@ capture_screenshot_of_output(struct client *client)
 	 */
 
 	return buffer;
+}
+
+static void
+write_visual_diff(pixman_image_t *ref_image,
+		  struct buffer *shot,
+		  const struct rectangle *clip,
+		  const char *test_name,
+		  int seq_no,
+		  const struct range *fuzz)
+{
+	char *fname;
+	char *ext_test_name;
+	pixman_image_t *diff;
+	int ret;
+
+	ret = asprintf(&ext_test_name, "%s-diff", test_name);
+	assert(ret >= 0);
+
+	fname = screenshot_output_filename(ext_test_name, seq_no);
+	diff = visualize_image_difference(ref_image, shot->image, clip, fuzz);
+	write_image_as_png(diff, fname);
+
+	pixman_image_unref(diff);
+	free(fname);
+	free(ext_test_name);
+}
+
+/**
+ * Take a screenshot and verify its contents
+ *
+ * Takes a screenshot and writes the image into a PNG file named with
+ * get_test_name() and seq_no. Compares the contents to the given reference
+ * image over the given clip rectangle, reports whether they match to the
+ * test log, and if they do not match writes a visual diff into a PNG file.
+ *
+ * The compositor output size and the reference image size must both contain
+ * the clip rectangle.
+ *
+ * This function uses the pixel value allowed fuzz approriate for GL-renderer
+ * with 8 bits per channel data.
+ *
+ * \param client The client, for connecting to the compositor.
+ * \param ref_image The reference image file basename, without sequence number
+ * and .png suffix.
+ * \param ref_seq_no The reference image sequence number.
+ * \param clip The region of interest, or NULL for comparing the whole
+ * images.
+ * \param seq_no Test sequence number, for writing output files.
+ * \return True if the screen contents matches the reference image,
+ * false otherwise.
+ *
+ * For bootstrapping, ref_image can be NULL or the file can be missing.
+ * In that case the screenshot file is written but no comparison is performed,
+ * and false is returned.
+ */
+bool
+verify_screen_content(struct client *client,
+		      const char *ref_image,
+		      int ref_seq_no,
+		      const struct rectangle *clip,
+		      int seq_no)
+{
+	const char *test_name = get_test_name();
+	const struct range gl_fuzz = { -3, 4 };
+	struct buffer *shot;
+	pixman_image_t *ref = NULL;
+	char *ref_fname = NULL;
+	char *shot_fname;
+	bool match;
+
+	shot = capture_screenshot_of_output(client);
+	assert(shot);
+	shot_fname = screenshot_output_filename(test_name, seq_no);
+	write_image_as_png(shot->image, shot_fname);
+
+	if (ref_image) {
+		ref_fname = screenshot_reference_filename(ref_image, ref_seq_no);
+		ref = load_image_from_png(ref_fname);
+	}
+
+	if (ref) {
+		match = check_images_match(ref, shot->image, clip, &gl_fuzz);
+		testlog("Verify reference image %s vs. shot %s: %s\n",
+			ref_fname, shot_fname, match ? "PASS" : "FAIL");
+
+		if (!match) {
+			write_visual_diff(ref, shot, clip,
+					  test_name, seq_no, &gl_fuzz);
+		}
+
+		pixman_image_unref(ref);
+	} else {
+		testlog("No reference image, shot %s: FAIL\n", shot_fname);
+		match = false;
+	}
+
+	free(ref_fname);
+	buffer_destroy(shot);
+	free(shot_fname);
+
+	return match;
+}
+
+/**
+ * Create a wl_buffer from a PNG file
+ *
+ * Loads the named PNG file from the directory of reference images,
+ * creates a wl_buffer with scale times the image dimensions in pixels,
+ * and copies the image content into the buffer using nearest-neighbor filter.
+ *
+ * \param client The client, for the Wayland connection.
+ * \param basename The PNG file name without .png suffix.
+ * \param scale Upscaling factor >= 1.
+ */
+struct buffer *
+client_buffer_from_image_file(struct client *client,
+			      const char *basename,
+			      int scale)
+{
+	struct buffer *buf;
+	char *fname;
+	pixman_image_t *img;
+	int buf_w, buf_h;
+	pixman_transform_t scaling;
+
+	assert(scale >= 1);
+
+	fname = image_filename(basename);
+	img = load_image_from_png(fname);
+	free(fname);
+	assert(img);
+
+	buf_w = scale * pixman_image_get_width(img);
+	buf_h = scale * pixman_image_get_height(img);
+	buf = create_shm_buffer_a8r8g8b8(client, buf_w, buf_h);
+
+	pixman_transform_init_scale(&scaling,
+				    pixman_fixed_1 / scale,
+				    pixman_fixed_1 / scale);
+	pixman_image_set_transform(img, &scaling);
+	pixman_image_set_filter(img, PIXMAN_FILTER_NEAREST, NULL, 0);
+
+	pixman_image_composite32(PIXMAN_OP_SRC,
+				 img, /* src */
+				 NULL, /* mask */
+				 buf->image, /* dst */
+				 0, 0, /* src x,y */
+				 0, 0, /* mask x,y */
+				 0, 0, /* dst x,y */
+				 buf_w, buf_h);
+	pixman_image_unref(img);
+
+	return buf;
+}
+
+/**
+ * Bind to a singleton global in wl_registry
+ *
+ * \param client Client whose registry and globals to use.
+ * \param iface The Wayland interface to look for.
+ * \param version The version to bind the interface with.
+ * \return A struct wl_proxy, which you need to cast to the proper type.
+ *
+ * Asserts that the global being searched for is a singleton and is found.
+ *
+ * Binds with the exact version given, does not take compositor interface
+ * version into account.
+ */
+void *
+bind_to_singleton_global(struct client *client,
+			 const struct wl_interface *iface,
+			 int version)
+{
+	struct global *tmp;
+	struct global *g = NULL;
+	struct wl_proxy *proxy;
+
+	wl_list_for_each(tmp, &client->global_list, link) {
+		if (strcmp(tmp->interface, iface->name))
+			continue;
+
+		assert(!g && "multiple singleton objects");
+		g = tmp;
+	}
+
+	assert(g && "singleton not found");
+
+	proxy = wl_registry_bind(client->wl_registry, g->name, iface, version);
+	assert(proxy);
+
+	return proxy;
+}
+
+/**
+ * Create a wp_viewport for the client surface
+ *
+ * \param client The client->surface to use.
+ * \return A fresh viewport object.
+ */
+struct wp_viewport *
+client_create_viewport(struct client *client)
+{
+	struct wp_viewporter *viewporter;
+	struct wp_viewport *viewport;
+
+	viewporter = bind_to_singleton_global(client,
+					      &wp_viewporter_interface, 1);
+	viewport = wp_viewporter_get_viewport(viewporter,
+					      client->surface->wl_surface);
+	assert(viewport);
+	wp_viewporter_destroy(viewporter);
+
+	return viewport;
+}
+
+/**
+ * Fill the image with the given color
+ *
+ * \param image The image to write to.
+ * \param color The color to use.
+ */
+void
+fill_image_with_color(pixman_image_t *image, pixman_color_t *color)
+{
+	pixman_image_t *solid;
+	int width;
+	int height;
+
+	width = pixman_image_get_width(image);
+	height = pixman_image_get_height(image);
+
+	solid = pixman_image_create_solid_fill(color);
+	pixman_image_composite32(PIXMAN_OP_SRC,
+				 solid, /* src */
+				 NULL, /* mask */
+				 image, /* dst */
+				 0, 0, /* src x,y */
+				 0, 0, /* mask x,y */
+				 0, 0, /* dst x,y */
+				 width, height);
+	pixman_image_unref(solid);
+}
+
+/**
+ * Convert 8-bit RGB to opaque Pixman color
+ *
+ * \param tmp Pixman color struct to fill in.
+ * \param r Red value, 0 - 255.
+ * \param g Green value, 0 - 255.
+ * \param b Blue value, 0 - 255.
+ * \return tmp
+ */
+pixman_color_t *
+color_rgb888(pixman_color_t *tmp, uint8_t r, uint8_t g, uint8_t b)
+{
+	tmp->alpha = 65535;
+	tmp->red = (r << 8) + r;
+	tmp->green = (g << 8) + g;
+	tmp->blue = (b << 8) + b;
+
+	return tmp;
 }

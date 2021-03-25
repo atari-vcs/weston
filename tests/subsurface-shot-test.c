@@ -31,9 +31,28 @@
 #include <sys/mman.h>
 
 #include "weston-test-client-helper.h"
+#include "weston-test-fixture-compositor.h"
 
-char *server_parameters = "--use-pixman --width=320 --height=240"
-	" --shell=weston-test-desktop-shell.so";
+static const enum renderer_type renderers[] = {
+	RENDERER_PIXMAN,
+	RENDERER_GL,
+};
+
+static enum test_result_code
+fixture_setup(struct weston_test_harness *harness, const enum renderer_type *arg)
+{
+	struct compositor_setup setup;
+
+	compositor_setup_defaults(&setup);
+	setup.renderer = *arg;
+	setup.width = 320;
+	setup.height = 240;
+	setup.shell = SHELL_TEST_DESKTOP;
+	setup.logging_scopes = "log,test-harness-plugin";
+
+	return weston_test_harness_execute_as_client(harness, &setup);
+}
+DECLARE_FIXTURE_SETUP_WITH_ARG(fixture_setup, renderers);
 
 static struct wl_subcompositor *
 get_subcompositor(struct client *client)
@@ -63,63 +82,6 @@ get_subcompositor(struct client *client)
 	return sub;
 }
 
-static void
-fill_color(pixman_image_t *image, pixman_color_t *color)
-{
-	pixman_image_t *solid;
-	int width;
-	int height;
-
-	width = pixman_image_get_width(image);
-	height = pixman_image_get_height(image);
-
-	solid = pixman_image_create_solid_fill(color);
-	pixman_image_composite32(PIXMAN_OP_SRC,
-				 solid, /* src */
-				 NULL, /* mask */
-				 image, /* dst */
-				 0, 0, /* src x,y */
-				 0, 0, /* mask x,y */
-				 0, 0, /* dst x,y */
-				 width, height);
-	pixman_image_unref(solid);
-}
-
-static pixman_color_t *
-color(pixman_color_t *tmp, uint8_t r, uint8_t g, uint8_t b)
-{
-	tmp->alpha = 65535;
-	tmp->red = (r << 8) + r;
-	tmp->green = (g << 8) + g;
-	tmp->blue = (b << 8) + b;
-
-	return tmp;
-}
-
-static void
-write_visual_diff(pixman_image_t *ref_image,
-		  struct buffer *shot,
-		  const struct rectangle *clip,
-		  const char *test_name,
-		  int seq_no)
-{
-	char *fname;
-	char *ext_test_name;
-	pixman_image_t *diff;
-	int ret;
-
-	ret = asprintf(&ext_test_name, "%s-diff", test_name);
-	assert(ret >= 0);
-
-	fname = screenshot_output_filename(ext_test_name, seq_no);
-	diff = visualize_image_difference(shot->image, ref_image, clip);
-	write_image_as_png(diff, fname);
-
-	pixman_image_unref(diff);
-	free(fname);
-	free(ext_test_name);
-}
-
 static int
 check_screen(struct client *client,
 	     const char *ref_image,
@@ -127,34 +89,10 @@ check_screen(struct client *client,
 	     const struct rectangle *clip,
 	     int seq_no)
 {
-	const char *test_name = get_test_name();
-	struct buffer *shot;
-	pixman_image_t *ref;
-	char *ref_fname;
-	char *shot_fname;
 	bool match;
 
-	ref_fname = screenshot_reference_filename(ref_image, ref_seq_no);
-	shot_fname = screenshot_output_filename(test_name, seq_no);
-
-	ref = load_image_from_png(ref_fname);
-	assert(ref);
-
-	shot = capture_screenshot_of_output(client);
-	assert(shot);
-
-	match = check_images_match(shot->image, ref, clip);
-	printf("ref %s vs. shot %s: %s\n", ref_fname, shot_fname,
-	       match ? "PASS" : "FAIL");
-
-	write_image_as_png(shot->image, shot_fname);
-	if (!match)
-		write_visual_diff(ref, shot, clip, test_name, seq_no);
-
-	buffer_destroy(shot);
-	pixman_image_unref(ref);
-	free(ref_fname);
-	free(shot_fname);
+	match = verify_screen_content(client, ref_image, ref_seq_no, clip,
+				      seq_no);
 
 	return match ? 0 : -1;
 }
@@ -166,7 +104,7 @@ surface_commit_color(struct client *client, struct wl_surface *surface,
 	struct buffer *buf;
 
 	buf = create_shm_buffer_a8r8g8b8(client, width, height);
-	fill_color(buf->image, color);
+	fill_image_with_color(buf->image, color);
 	wl_surface_attach(surface, buf->proxy, 0, 0);
 	wl_surface_damage(surface, 0, 0, width, height);
 	wl_surface_commit(surface);
@@ -176,7 +114,6 @@ surface_commit_color(struct client *client, struct wl_surface *surface,
 
 TEST(subsurface_z_order)
 {
-	const char *test_name = get_test_name();
 	struct client *client;
 	struct wl_subcompositor *subco;
 	struct buffer *bufs[5] = { 0 };
@@ -190,10 +127,10 @@ TEST(subsurface_z_order)
 	pixman_color_t cyan;
 	pixman_color_t green;
 
-	color(&red, 255, 0, 0);
-	color(&blue, 0, 0, 255);
-	color(&cyan, 0, 255, 255);
-	color(&green, 0, 255, 0);
+	color_rgb888(&red, 255, 0, 0);
+	color_rgb888(&blue, 0, 0, 255);
+	color_rgb888(&cyan, 0, 255, 255);
+	color_rgb888(&green, 0, 255, 0);
 
 	client = create_client_and_test_surface(100, 50, 100, 100);
 	assert(client);
@@ -207,7 +144,7 @@ TEST(subsurface_z_order)
 	bufs[0] = surface_commit_color(client, surf[0], &red, 100, 100);
 	/* sub[0] is not used */
 
-	fail += check_screen(client, test_name, 0, &clip, 0);
+	fail += check_screen(client, "subsurface_z_order", 0, &clip, 0);
 
 	/* create a blue sub-surface above red */
 	surf[1] = wl_compositor_create_surface(client->wl_compositor);
@@ -217,7 +154,7 @@ TEST(subsurface_z_order)
 	wl_subsurface_set_position(sub[1], 20, 20);
 	wl_surface_commit(surf[0]);
 
-	fail += check_screen(client, test_name, 1, &clip, 1);
+	fail += check_screen(client, "subsurface_z_order", 1, &clip, 1);
 
 	/* create a cyan sub-surface above blue */
 	surf[2] = wl_compositor_create_surface(client->wl_compositor);
@@ -228,7 +165,7 @@ TEST(subsurface_z_order)
 	wl_surface_commit(surf[1]);
 	wl_surface_commit(surf[0]);
 
-	fail += check_screen(client, test_name, 2, &clip, 2);
+	fail += check_screen(client, "subsurface_z_order", 2, &clip, 2);
 
 	/* create a green sub-surface above blue, sibling to cyan */
 	surf[3] = wl_compositor_create_surface(client->wl_compositor);
@@ -239,13 +176,13 @@ TEST(subsurface_z_order)
 	wl_surface_commit(surf[1]);
 	wl_surface_commit(surf[0]);
 
-	fail += check_screen(client, test_name, 3, &clip, 3);
+	fail += check_screen(client, "subsurface_z_order", 3, &clip, 3);
 
 	/* stack blue below red, which brings also cyan and green below red */
 	wl_subsurface_place_below(sub[1], surf[0]);
 	wl_surface_commit(surf[0]);
 
-	fail += check_screen(client, test_name, 4, &clip, 4);
+	fail += check_screen(client, "subsurface_z_order", 4, &clip, 4);
 
 	assert(fail == 0);
 
