@@ -1,3 +1,9 @@
+weston (9.0.0-4~exp1ata9) vcs; urgency=medium
+
+  * Don't attempt to install missing pipewire-plugin.so.
+
+ -- Christopher Obbard <chris.obbard@collabora.com>  Thu, 25 Mar 2021 11:08:32 +0000
+
 weston (9.0.0-4~exp1ata8) vcs; urgency=medium
 
   * debian/patches/atari/0001-kiosk-shell-Add-transform_handler-from-desktop-shell.patch
