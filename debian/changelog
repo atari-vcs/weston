@@ -1,3 +1,9 @@
+weston (9.0.0-4~exp1ata10) vcs; urgency=medium
+
+  * Add missing symbol weston_desktop_get_api_name to debian/libweston-9-0.symbols
+
+ -- Christopher Obbard <chris.obbard@collabora.com>  Thu, 25 Mar 2021 11:21:43 +0000
+
 weston (9.0.0-4~exp1ata9) vcs; urgency=medium
 
   * Don't attempt to install missing pipewire-plugin.so.

@@ -318,6 +318,7 @@ libweston-desktop-9.so.0 libweston-9-0 #MINVER#
  weston_desktop_client_ping@Base 9.0.0
  weston_desktop_create@Base 9.0.0
  weston_desktop_destroy@Base 9.0.0
+ weston_desktop_get_api_name@Base 9.0.0
  weston_desktop_surface_add_metadata_listener@Base 9.0.0
  weston_desktop_surface_close@Base 9.0.0
  weston_desktop_surface_create_view@Base 9.0.0
