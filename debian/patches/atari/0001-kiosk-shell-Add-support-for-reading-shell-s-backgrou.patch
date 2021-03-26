@@ -1,0 +1,88 @@
+From f331b6ceed0a5bde54caea3608774a6a9a98b172 Mon Sep 17 00:00:00 2001
+From: Marius Vlad <marius.vlad@collabora.com>
+Date: Thu, 25 Mar 2021 17:34:20 +0200
+Forwarded: https://gitlab.freedesktop.org/wayland/weston/-/merge_requests/576
+Subject: kiosk-shell: Add support for reading shell's background-color
+
+Some useful feature to configure the (default) background color.
+
+Signed-off-by: Marius Vlad <marius.vlad@collabora.com>
+---
+ kiosk-shell/kiosk-shell.c | 17 ++++++++++++++++-
+ kiosk-shell/kiosk-shell.h |  2 ++
+ 2 files changed, 18 insertions(+), 1 deletion(-)
+
+diff --git a/kiosk-shell/kiosk-shell.c b/kiosk-shell/kiosk-shell.c
+index e4731195..f1a4b0e2 100644
+--- a/kiosk-shell/kiosk-shell.c
++++ b/kiosk-shell/kiosk-shell.c
+@@ -451,6 +451,9 @@ kiosk_shell_output_recreate_background(struct kiosk_shell_output *shoutput)
+ {
+ 	struct kiosk_shell *shell = shoutput->shell;
+ 	struct weston_output *output = shoutput->output;
++	struct weston_config_section *shell_section;
++	uint32_t bg_color;
++	float r, g, b;
+ 
+ 	if (shoutput->background_view)
+ 		weston_surface_destroy(shoutput->background_view->surface);
+@@ -458,9 +461,17 @@ kiosk_shell_output_recreate_background(struct kiosk_shell_output *shoutput)
+ 	if (!output)
+ 		return;
+ 
++	shell_section = weston_config_get_section(shell->config, "shell", NULL, NULL);
++	weston_config_section_get_color(shell_section, "background-color",
++					&bg_color, 0x00000000);
++
++	r = ((bg_color >> 16) & 0xff) / 255.0;
++	b = ((bg_color >> 8) & 0xff) / 255.0,
++	g = ((bg_color >> 0) & 0xff) / 255.0;
++
+ 	shoutput->background_view =
+ 			create_colored_surface(shoutput->shell->compositor,
+-					       0.5, 0.5, 0.5,
++					       r, g, b,
+ 					       output->x, output->y,
+ 					       output->width,
+ 			                       output->height);
+@@ -1100,6 +1111,7 @@ wet_shell_init(struct weston_compositor *ec,
+ 	struct kiosk_shell *shell;
+ 	struct weston_seat *seat;
+ 	struct weston_output *output;
++	const char *config_file;
+ 
+ 	shell = zalloc(sizeof *shell);
+ 	if (shell == NULL)
+@@ -1114,6 +1126,9 @@ wet_shell_init(struct weston_compositor *ec,
+ 		return 0;
+ 	}
+ 
++	config_file = weston_config_get_name_from_env();
++	shell->config = weston_config_parse(config_file);
++
+ 	weston_layer_init(&shell->background_layer, ec);
+ 	weston_layer_init(&shell->normal_layer, ec);
+ 
+diff --git a/kiosk-shell/kiosk-shell.h b/kiosk-shell/kiosk-shell.h
+index 50e8c839..0edf9d80 100644
+--- a/kiosk-shell/kiosk-shell.h
++++ b/kiosk-shell/kiosk-shell.h
+@@ -26,6 +26,7 @@
+ 
+ #include <libweston-desktop/libweston-desktop.h>
+ #include <libweston/libweston.h>
++#include <libweston/config-parser.h>
+ 
+ struct kiosk_shell {
+ 	struct weston_compositor *compositor;
+@@ -43,6 +44,7 @@ struct kiosk_shell {
+ 
+ 	struct wl_list output_list;
+ 	const struct weston_xwayland_surface_api *xwayland_surface_api;
++	struct weston_config *config;
+ };
+ 
+ struct kiosk_shell_surface {
+-- 
+2.29.2
+

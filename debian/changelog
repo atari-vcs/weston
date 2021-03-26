@@ -1,3 +1,10 @@
+weston (9.0.0-4~exp1ata11) vcs; urgency=medium
+
+  * debian/patches/atari/0001-kiosk-shell-Add-support-for-reading-shell-s-backgrou.patch
+  + added.
+
+ -- Marius Vlad <marius.vlad@collabora.com>  Fri, 26 Mar 2021 14:28:18 +0200
+
 weston (9.0.0-4~exp1ata10) vcs; urgency=medium
 
   * Add missing symbol weston_desktop_get_api_name to debian/libweston-9-0.symbols
