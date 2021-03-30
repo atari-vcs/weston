@@ -8,3 +8,8 @@ atari/0007-window-manager-Force-xwayland-surfaces-be-fullscreen.patch
 atari/0001-kiosk-shell-Add-transform_handler-from-desktop-shell.patch
 atari/0001-kiosk-shell-Add-support-for-reading-shell-s-backgrou.patch
 atari/0001-xwayland-window-manager-Make-clients-maximized-when-.patch
+atari/0001-kiosk-shell-Add-additional-layers.patch
+atari/0002-kiosk-shell-Give-keyboard-focus-when-mapping-the-sur.patch
+atari/0003-kiosk-shell-Embed-keyboard-focus-activation-code.patch
+atari/0004-kiosk-shell-Correctly-de-activate-surfaces-when-remo.patch
+atari/0005-kiosk-shell-Avoid-input-focus-and-xdg-shell-activati.patch
