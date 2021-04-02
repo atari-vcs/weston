@@ -1,8 +1,10 @@
 From 20016f432e17e5fa7c677de3380f141a8c343503 Mon Sep 17 00:00:00 2001
 From: Marius Vlad <marius.vlad@collabora.com>
 Date: Tue, 23 Mar 2021 15:55:00 +0200
-Subject: [PATCH] kiosk-shell: Add transform_handler from desktop-shell to
+Forwarded: https://gitlab.freedesktop.org/wayland/weston/-/merge_requests/576
+Subject: kiosk-shell: Add transform_handler from desktop-shell to
  correctly position xwayland surfaces
+Reviewed-by: Alexandros Frantzis <alexandros.frantzis@collabora.com>
 
 Signed-off-by: Marius Vlad <marius.vlad@collabora.com>
 ---

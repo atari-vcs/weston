@@ -1,7 +1,9 @@
 From 80b375f1ff3822209831d783600a6ef6c7bba230 Mon Sep 17 00:00:00 2001
 From: Marius Vlad <marius.vlad@collabora.com>
 Date: Tue, 23 Mar 2021 09:57:52 +0200
-Subject: [PATCH 3/7] kiosk-shell: Enable screenshooter in kiosk-shell
+Forwarded: https://gitlab.freedesktop.org/wayland/weston/-/merge_requests/576
+Subject: kiosk-shell: Enable screenshooter in kiosk-shell
+Reviewed-by: Alexandros Frantzis <alexandros.frantzis@collabora.com>
 
 Signed-off-by: Marius Vlad <marius.vlad@collabora.com>
 ---
