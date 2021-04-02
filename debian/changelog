@@ -1,3 +1,10 @@
+weston (9.0.0-4~exp1ata12) vcs; urgency=medium
+
+  * debian/patches/atari/0001-xwayland-window-manager-Make-clients-maximized-when-.patch
+  + added.
+
+ -- Marius Vlad <marius.vlad@collabora.com>  Fri, 02 Apr 2021 11:15:17 +0300
+
 weston (9.0.0-4~exp1ata11) vcs; urgency=medium
 
   * debian/patches/atari/0001-kiosk-shell-Add-support-for-reading-shell-s-backgrou.patch

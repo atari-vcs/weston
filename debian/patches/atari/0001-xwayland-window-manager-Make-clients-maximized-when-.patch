@@ -1,0 +1,52 @@
+From d10b03121c598c5ec19a12b035b703809cd7e86d Mon Sep 17 00:00:00 2001
+From: Marius Vlad <marius.vlad@collabora.com>
+Date: Fri, 2 Apr 2021 10:40:31 +0300
+Forwarded: no
+Subject: xwayland/window-manager: Make clients maximized when no normal window type set
+
+Clients not setting _NET_WM_WINDOW_TYPE_NORMAL, indicating the top level
+functional type of the window would not be forced as fullscreen, as
+we're assuming that all clients would set that up.
+
+As the window size is correctly set-up, force them to be
+maximzed, making it (relatively) easy to determine when that happens
+(as normally clients *should* set _NET_WM_WINDOW_TYPE_NORMAL for regular
+top level windows).
+
+Signed-off-by: Marius Vlad <marius.vlad@collabora.com>
+---
+ xwayland/window-manager.c | 11 ++++++++++-
+ 1 file changed, 10 insertions(+), 1 deletion(-)
+
+diff --git a/xwayland/window-manager.c b/xwayland/window-manager.c
+index 1e6bdeb7..95d0463f 100644
+--- a/xwayland/window-manager.c
++++ b/xwayland/window-manager.c
+@@ -663,6 +663,10 @@ weston_wm_window_read_properties(struct weston_wm_window *window)
+ 		window->maximized_vert = 0;
+ 		window->maximized_horz = 0;
+ 		weston_wm_window_set_net_wm_state(window);
++	} else if (!window->fullscreen && !strcmp(running_shell, "kiosk-shell")) {
++		window->maximized_vert = 1;
++		window->maximized_horz = 1;
++		weston_wm_window_set_net_wm_state(window);
+ 	}
+ }
+ 
+@@ -1804,7 +1808,12 @@ weston_wm_window_handle_state(struct weston_wm_window *window,
+                 property2 = wm->atom.net_wm_state_fullscreen;
+                 action = _NET_WM_STATE_ADD;
+                 wm_printf(wm, "XWM: Note: Replacing client message with fullscreen state addition\n");
+-        }
++        } else if (!strcmp(running_shell, "kiosk-shell")) {
++                property1 = wm->atom.net_wm_state_maximized_vert;
++                property2 = wm->atom.net_wm_state_maximized_horz;
++                action = _NET_WM_STATE_ADD;
++                wm_printf(wm, "XWM: Note: Replacing client message with maximized state addition\n");
++	}
+ 
+ 	if ((property1 == wm->atom.net_wm_state_fullscreen ||
+ 	     property2 == wm->atom.net_wm_state_fullscreen) &&
+-- 
+2.29.2
+
