@@ -6,3 +6,4 @@ atari/0005-libweston-desktop-Allow-the-possibility-to-identify-.patch
 atari/0006-xwayland-internal-interface-Extract-weston_desktop.patch
 atari/0007-window-manager-Force-xwayland-surfaces-be-fullscreen.patch
 atari/0001-kiosk-shell-Add-transform_handler-from-desktop-shell.patch
+atari/0001-kiosk-shell-Add-support-for-reading-shell-s-backgrou.patch
