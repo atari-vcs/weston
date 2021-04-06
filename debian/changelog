@@ -1,3 +1,36 @@
+weston (9.0.0-4~exp1ata13) vcs; urgency=medium
+
+  * debian/patches/atari/0001-kiosk-shell-Add-additional-layers.patch added.
+  * debian/patches/atari/0002-kiosk-shell-Give-keyboard-focus-when-mapping-the-sur.patch
+  + added.
+  * debian/patches/atari/0003-kiosk-shell-Embed-keyboard-focus-activation-code.patch
+  + added.
+  * debian/patches/atari/0004-kiosk-shell-Correctly-de-activate-surfaces-when-remo.patch
+  + added.
+  * debian/patches/atari/0005-kiosk-shell-Avoid-input-focus-and-xdg-shell-activati.patch
+  + added.
+
+  Patches series will maintain the same stacking order between the dashboard,
+  bundles, in-game menu and notifications, irrespective of they start-up order.
+  There's an assumption in that, such that dashboard and bundles share the
+  same layer, to keep any menu/dialog or pop-ups from xwayland be placed
+  incorrectly underneath a fullscreen window. This is a *limitation* from
+  xwayland side of things. If dialogs/menu pop-ups are not a concern there's a
+  dedicated layer that sits on top of the that layer which can be used if we
+  want to have *strict* ordering (though a normal user would need the
+  dashboard to start apps).
+
+  Application are identified using the path and inserted into their respective
+  layer. Notifications are placed in the upper top most layer and with the
+  last patch they won't any receive input keyboard focus/or xdg-shell
+  activation such that windows in the background layers to still receive
+  keyboard input. This allows to have notification that can done using a full
+  screen top level xdg-shell surface role, that is alpha blended with the
+  lower surfaces and a sub-surfaces that could be independently be positioned
+  by the client.
+
+ -- Marius Vlad <Marius Vlad@collabora.com>  Tue, 30 Mar 2021 20:29:02 +0300
+
 weston (9.0.0-4~exp1ata12) vcs; urgency=medium
 
   * debian/patches/atari/0001-xwayland-window-manager-Make-clients-maximized-when-.patch

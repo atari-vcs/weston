@@ -1,0 +1,122 @@
+From 494e88c9d23257fa5fdaedf427d156f07bc00e84 Mon Sep 17 00:00:00 2001
+From: Marius Vlad <marius.vlad@collabora.com>
+Date: Tue, 30 Mar 2021 15:51:53 +0300
+Forwarded: no
+Subject: [PATCH 4/5] kiosk-shell: Correctly de-activate surfaces when removed
+
+This is a small follow from 911716919, as it seems it missed
+the de-activation part and with that we need to take care of
+properly giving input focus when we destroy surfaces.
+
+Note that we removed the surface focus check as to accommodate
+sub-surfaces cases.
+
+Signed-off-by: Marius Vlad <marius.vlad@collabora.com>
+---
+ kiosk-shell/kiosk-shell.c | 37 ++++++++++++++++++++++++++++++++-----
+ kiosk-shell/kiosk-shell.h |  3 +++
+ 2 files changed, 35 insertions(+), 5 deletions(-)
+
+diff --git a/kiosk-shell/kiosk-shell.c b/kiosk-shell/kiosk-shell.c
+index 929a1071..442c9235 100644
+--- a/kiosk-shell/kiosk-shell.c
++++ b/kiosk-shell/kiosk-shell.c
+@@ -387,6 +387,7 @@ kiosk_shell_surface_create(struct kiosk_shell *shell,
+ 	shsurf->client = wl_client;
+ 
+ 	weston_desktop_surface_set_user_data(desktop_surface, shsurf);
++	wl_list_insert(&shell->shsurfs, &shsurf->link);
+ 
+ 	wl_signal_init(&shsurf->destroy_signal);
+ 
+@@ -677,6 +678,20 @@ find_focus_successor(struct weston_layer_entry *layer_entry,
+ 	return top_view;
+ }
+ 
++static struct kiosk_shell_surface *
++kiosk_shell_get_kiosk_shell_surface_from_view(struct kiosk_shell *shell,
++					      struct weston_view *ev)
++{
++	struct kiosk_shell_surface *sh;
++
++	wl_list_for_each(sh, &shell->shsurfs, link) {
++		if (sh->view == ev)
++			return sh;
++	}
++
++	return NULL;
++}
++
+ static void
+ desktop_surface_removed(struct weston_desktop_surface *desktop_surface,
+ 			void *data)
+@@ -684,8 +699,6 @@ desktop_surface_removed(struct weston_desktop_surface *desktop_surface,
+ 	struct kiosk_shell *shell = data;
+ 	struct kiosk_shell_surface *shsurf =
+ 		weston_desktop_surface_get_user_data(desktop_surface);
+-	struct weston_surface *surface =
+-		weston_desktop_surface_get_surface(desktop_surface);
+ 	struct weston_view *focus_view;
+ 	struct weston_seat *seat;
+ 	struct weston_layer_entry *list_entry;
+@@ -698,12 +711,25 @@ desktop_surface_removed(struct weston_desktop_surface *desktop_surface,
+ 
+ 	if (focus_view) {
+ 		wl_list_for_each(seat, &shell->compositor->seat_list, link) {
+-			struct weston_keyboard *keyboard = seat->keyboard_state;
+-			if (keyboard && keyboard->focus == surface)
+-				weston_view_activate(focus_view, seat, 0);
++			struct kiosk_shell_seat *kiosk_seat = get_kiosk_shell_seat(seat);
++
++			weston_view_activate(focus_view, seat, 0);
++
++			struct kiosk_shell_surface *shsurf_to_activate =
++				kiosk_shell_get_kiosk_shell_surface_from_view(shsurf->shell, focus_view);
++
++			if (shsurf_to_activate) {
++				struct weston_surface *surface_to_activate =
++				       weston_desktop_surface_get_surface(shsurf_to_activate->desktop_surface);
++
++				kiosk_shell_surface_deactivate(shsurf);
++				kiosk_seat->focused_surface = surface_to_activate;
++				kiosk_shell_surface_activate(shsurf_to_activate);
++			}
+ 		}
+ 	}
+ 
++	wl_list_remove(&shsurf->link);
+ 	kiosk_shell_surface_destroy(shsurf);
+ }
+ 
+@@ -1249,6 +1275,7 @@ wet_shell_init(struct weston_compositor *ec,
+ 	config_file = weston_config_get_name_from_env();
+ 	shell->config = weston_config_parse(config_file);
+ 
++	wl_list_init(&shell->shsurfs);
+ 	weston_layer_init(&shell->background_layer, ec);
+ 	weston_layer_init(&shell->normal_layer, ec);
+ 
+diff --git a/kiosk-shell/kiosk-shell.h b/kiosk-shell/kiosk-shell.h
+index 740ecfd2..4ccf84c2 100644
+--- a/kiosk-shell/kiosk-shell.h
++++ b/kiosk-shell/kiosk-shell.h
+@@ -48,6 +48,8 @@ struct kiosk_shell {
+ 	struct wl_list output_list;
+ 	const struct weston_xwayland_surface_api *xwayland_surface_api;
+ 	struct weston_config *config;
++
++	struct wl_list shsurfs;
+ };
+ 
+ struct kiosk_shell_surface {
+@@ -75,6 +77,7 @@ struct kiosk_shell_surface {
+ 	} xwayland;
+ 
+ 	struct wl_client *client;
++	struct wl_list link;
+ };
+ 
+ struct kiosk_shell_seat {
+-- 
+2.29.2
+

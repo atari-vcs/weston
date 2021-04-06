@@ -1,0 +1,91 @@
+From 911716919b5729d54a1e36b96c5df383625e30a1 Mon Sep 17 00:00:00 2001
+From: Marius Vlad <marius.vlad@collabora.com>
+Date: Tue, 30 Mar 2021 12:08:14 +0300
+Forwaded: https://gitlab.freedesktop.org/wayland/weston/-/merge_requests/570
+Subject: [PATCH 3/5] kiosk-shell: Embed keyboard focus activation code
+
+Just like desktop-shell, we shouldn't be dependent on having a keyboard
+to be present in order to activate a window/surface.
+
+Signed-off-by: Marius Vlad <marius.vlad@collabora.com>
+---
+ kiosk-shell/kiosk-shell.c | 52 ++++++++++++++++++++++++---------------
+ 1 file changed, 32 insertions(+), 20 deletions(-)
+
+diff --git a/kiosk-shell/kiosk-shell.c b/kiosk-shell/kiosk-shell.c
+index ec56025b..929a1071 100644
+--- a/kiosk-shell/kiosk-shell.c
++++ b/kiosk-shell/kiosk-shell.c
+@@ -398,28 +398,24 @@ kiosk_shell_surface_create(struct kiosk_shell *shell,
+  */
+ 
+ static void
+-kiosk_shell_seat_handle_keyboard_focus(struct wl_listener *listener, void *data)
++kiosk_shell_surface_deactivate(struct kiosk_shell_surface *shsurf)
+ {
+-	struct weston_keyboard *keyboard = data;
+-	struct kiosk_shell_seat *shseat = get_kiosk_shell_seat(keyboard->seat);
+-
+-	if (shseat->focused_surface) {
+-		struct kiosk_shell_surface *shsurf =
+-			get_kiosk_shell_surface(shseat->focused_surface);
+-		if (shsurf && --shsurf->focus_count == 0)
+-			weston_desktop_surface_set_activated(shsurf->desktop_surface,
+-							     false);
+-	}
++	if (--shsurf->focus_count == 0)
++		weston_desktop_surface_set_activated(shsurf->desktop_surface, false);
++}
+ 
+-	shseat->focused_surface = weston_surface_get_main_surface(keyboard->focus);
++static void
++kiosk_shell_surface_activate(struct kiosk_shell_surface *shsurf)
++{
++	if (shsurf->focus_count++ == 0)
++		weston_desktop_surface_set_activated(shsurf->desktop_surface, true);
++}
+ 
+-	if (shseat->focused_surface) {
+-		struct kiosk_shell_surface *shsurf =
+-			get_kiosk_shell_surface(shseat->focused_surface);
+-		if (shsurf && shsurf->focus_count++ == 0)
+-			weston_desktop_surface_set_activated(shsurf->desktop_surface,
+-							     true);
+-	}
++static void
++kiosk_shell_seat_handle_keyboard_focus(struct wl_listener *listener, void *data)
++{
++	/* kept for future usage, handle_keyboard_focus() is trigged from
++	 * weston_keyboard_set_focus() */
+ }
+ 
+ static void
+@@ -810,8 +806,24 @@ desktop_surface_committed(struct weston_desktop_surface *desktop_surface,
+ 		shsurf->view->is_mapped = true;
+ 		surface->is_mapped = true;
+ 
+-		wl_list_for_each(seat, &shsurf->shell->compositor->seat_list, link)
++		wl_list_for_each(seat, &shsurf->shell->compositor->seat_list, link) {
++			struct kiosk_shell_seat *kiosk_seat = get_kiosk_shell_seat(seat);
+ 			weston_view_activate(shsurf->view, seat, 0);
++
++			if (kiosk_seat->focused_surface) {
++				struct kiosk_shell_surface *current_focus =
++					get_kiosk_shell_surface(kiosk_seat->focused_surface);
++				if (current_focus)
++					kiosk_shell_surface_deactivate(current_focus);
++			}
++
++			kiosk_seat->focused_surface = surface;
++
++			if (kiosk_seat->focused_surface) {
++				if (shsurf)
++					kiosk_shell_surface_activate(shsurf);
++			}
++		}
+ 	}
+ 
+ 	if (!is_fullscreen && (sx != 0 || sy != 0)) {
+-- 
+2.29.2
+
