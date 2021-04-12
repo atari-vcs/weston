@@ -1,8 +1,8 @@
-From 79bd774a38cee7e9780e9934e5730c8fae5296f4 Mon Sep 17 00:00:00 2001
+From b931bba083428951000628873e62ec71d156b7c2 Mon Sep 17 00:00:00 2001
 From: Marius Vlad <marius.vlad@collabora.com>
 Date: Fri, 26 Mar 2021 16:21:48 +0200
 Forwarded: not-needed
-Subject: [PATCH 1/5] kiosk-shell: Add additional layers
+Subject: [PATCH 10/14] kiosk-shell: Add additional layers
 
 And with it, place certain applications based on path, in those layers.
 
@@ -21,12 +21,12 @@ pop-ups from dashboard for instance.
 
 Signed-off-by: Marius Vlad <marius.vlad@collabora.com>
 ---
- kiosk-shell/kiosk-shell.c | 130 ++++++++++++++++++++++++++++++++++++--
+ kiosk-shell/kiosk-shell.c | 131 ++++++++++++++++++++++++++++++++++++--
  kiosk-shell/kiosk-shell.h |   5 ++
- 2 files changed, 130 insertions(+), 5 deletions(-)
+ 2 files changed, 130 insertions(+), 6 deletions(-)
 
 diff --git a/kiosk-shell/kiosk-shell.c b/kiosk-shell/kiosk-shell.c
-index f1a4b0e2..651a8111 100644
+index f1a4b0e2..eac8f420 100644
 --- a/kiosk-shell/kiosk-shell.c
 +++ b/kiosk-shell/kiosk-shell.c
 @@ -23,10 +23,13 @@
@@ -115,40 +115,36 @@ index f1a4b0e2..651a8111 100644
  
  	weston_desktop_surface_set_user_data(desktop_surface, shsurf);
  
-@@ -608,7 +655,7 @@ desktop_surface_added(struct weston_desktop_surface *desktop_surface,
+@@ -608,15 +655,16 @@ desktop_surface_added(struct weston_desktop_surface *desktop_surface,
   * but if we can't find one we fall back to the top view regardless of
   * parentage. */
  static struct weston_view *
 -find_focus_successor(struct weston_layer *layer,
-+find_focus_successor(struct weston_layer_entry *layer_entry,
- 		     struct kiosk_shell_surface *shsurf)
+-		     struct kiosk_shell_surface *shsurf)
++find_focus_successor(struct kiosk_shell_surface *shsurf)
  {
  	struct kiosk_shell_surface *parent_root =
-@@ -616,7 +663,7 @@ find_focus_successor(struct weston_layer *layer,
+ 		kiosk_shell_surface_get_parent_root(shsurf);
  	struct weston_view *top_view = NULL;
++	struct weston_compositor *ec = shsurf->shell->compositor;
  	struct weston_view *view;
  
 -	wl_list_for_each(view, &layer->view_list.link, layer_link.link) {
-+	wl_list_for_each(view, &layer_entry->link, layer_link.link) {
++
++	wl_list_for_each(view, &ec->view_list, link) {
  		struct kiosk_shell_surface *view_shsurf;
  		struct kiosk_shell_surface *root;
  
-@@ -649,11 +696,13 @@ desktop_surface_removed(struct weston_desktop_surface *desktop_surface,
- 		weston_desktop_surface_get_surface(desktop_surface);
- 	struct weston_view *focus_view;
- 	struct weston_seat *seat;
-+	struct weston_layer_entry *list_entry;
- 
+@@ -653,7 +701,7 @@ desktop_surface_removed(struct weston_desktop_surface *desktop_surface,
  	if (!shsurf)
  		return;
  
 -	focus_view = find_focus_successor(&shell->normal_layer, shsurf);
-+	list_entry = kiosk_shell_verify_apps(shsurf);
-+	focus_view = find_focus_successor(list_entry, shsurf);
++	focus_view = find_focus_successor(shsurf);
  
  	if (focus_view) {
  		wl_list_for_each(seat, &shell->compositor->seat_list, link) {
-@@ -666,6 +715,55 @@ desktop_surface_removed(struct weston_desktop_surface *desktop_surface,
+@@ -666,6 +714,55 @@ desktop_surface_removed(struct weston_desktop_surface *desktop_surface,
  	kiosk_shell_surface_destroy(shsurf);
  }
  
@@ -204,7 +200,7 @@ index f1a4b0e2..651a8111 100644
  static void
  desktop_surface_committed(struct weston_desktop_surface *desktop_surface,
  			  int32_t sx, int32_t sy, void *data)
-@@ -706,7 +804,10 @@ desktop_surface_committed(struct weston_desktop_surface *desktop_surface,
+@@ -706,7 +803,10 @@ desktop_surface_committed(struct weston_desktop_surface *desktop_surface,
  	}
  
  	if (!weston_surface_is_mapped(surface)) {
@@ -216,7 +212,7 @@ index f1a4b0e2..651a8111 100644
  					  &shsurf->view->layer_link);
  		shsurf->view->is_mapped = true;
  		surface->is_mapped = true;
-@@ -874,6 +975,7 @@ static const struct weston_desktop_api kiosk_shell_desktop_api = {
+@@ -874,6 +974,7 @@ static const struct weston_desktop_api kiosk_shell_desktop_api = {
  	.set_xwayland_position = desktop_surface_set_xwayland_position,
  };
  
@@ -224,7 +220,7 @@ index f1a4b0e2..651a8111 100644
  /*
   * kiosk_shell
   */
-@@ -911,8 +1013,11 @@ kiosk_shell_activate_view(struct kiosk_shell *shell,
+@@ -911,8 +1012,11 @@ kiosk_shell_activate_view(struct kiosk_shell *shell,
  	 * obscure all children.
  	 */
  	if (shsurf->parent) {
@@ -237,7 +233,7 @@ index f1a4b0e2..651a8111 100644
  					  &view->layer_link);
  		weston_view_geometry_dirty(view);
  		weston_surface_damage(view->surface);
-@@ -1036,6 +1141,7 @@ kiosk_shell_handle_output_resized(struct wl_listener *listener, void *data)
+@@ -1036,6 +1140,7 @@ kiosk_shell_handle_output_resized(struct wl_listener *listener, void *data)
  
  	kiosk_shell_output_recreate_background(shoutput);
  
@@ -245,7 +241,7 @@ index f1a4b0e2..651a8111 100644
  	wl_list_for_each(view, &shell->normal_layer.view_list.link,
  			 layer_link.link) {
  		struct kiosk_shell_surface *shsurf;
-@@ -1065,6 +1171,7 @@ kiosk_shell_handle_output_moved(struct wl_listener *listener, void *data)
+@@ -1065,6 +1170,7 @@ kiosk_shell_handle_output_moved(struct wl_listener *listener, void *data)
  					 view->geometry.y + output->move_y);
  	}
  
@@ -253,7 +249,7 @@ index f1a4b0e2..651a8111 100644
  	wl_list_for_each(view, &shell->normal_layer.view_list.link,
  			 layer_link.link) {
  		if (view->output != output)
-@@ -1132,6 +1239,10 @@ wet_shell_init(struct weston_compositor *ec,
+@@ -1132,6 +1238,10 @@ wet_shell_init(struct weston_compositor *ec,
  	weston_layer_init(&shell->background_layer, ec);
  	weston_layer_init(&shell->normal_layer, ec);
  
@@ -264,7 +260,7 @@ index f1a4b0e2..651a8111 100644
  	weston_layer_set_position(&shell->background_layer,
  				  WESTON_LAYER_POSITION_BACKGROUND);
  	/* We use the NORMAL layer position, so that xwayland surfaces, which
-@@ -1139,6 +1250,15 @@ wet_shell_init(struct weston_compositor *ec,
+@@ -1139,6 +1249,15 @@ wet_shell_init(struct weston_compositor *ec,
  	weston_layer_set_position(&shell->normal_layer,
  				  WESTON_LAYER_POSITION_NORMAL);
  

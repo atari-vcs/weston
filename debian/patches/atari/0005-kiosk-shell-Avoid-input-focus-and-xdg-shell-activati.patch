@@ -1,8 +1,8 @@
-From cdfb3a2095092c2609b748f42e98633b8a59e7c7 Mon Sep 17 00:00:00 2001
+From 95b677c847db9efbffd7c133f14225a3dca7cd7f Mon Sep 17 00:00:00 2001
 From: Marius Vlad <marius.vlad@collabora.com>
 Date: Tue, 30 Mar 2021 19:26:40 +0300
-Forwarded: no
-Subject: [PATCH 5/5] kiosk-shell: Avoid input focus and xdg-shell activation
+Forwarded: not-needed
+Subject: [PATCH 14/14] kiosk-shell: Avoid input focus and xdg-shell activation
 
 For views that make into the pop-up layer (notifications), we do not
 activate any focus on those surfaces such that anything that is lower
@@ -15,10 +15,10 @@ Signed-off-by: Marius Vlad <marius.vlad@collabora.com>
  1 file changed, 19 insertions(+), 13 deletions(-)
 
 diff --git a/kiosk-shell/kiosk-shell.c b/kiosk-shell/kiosk-shell.c
-index 442c9235..f2f518ca 100644
+index 1baca36e..cfc454dc 100644
 --- a/kiosk-shell/kiosk-shell.c
 +++ b/kiosk-shell/kiosk-shell.c
-@@ -834,20 +834,26 @@ desktop_surface_committed(struct weston_desktop_surface *desktop_surface,
+@@ -833,20 +833,26 @@ desktop_surface_committed(struct weston_desktop_surface *desktop_surface,
  
  		wl_list_for_each(seat, &shsurf->shell->compositor->seat_list, link) {
  			struct kiosk_shell_seat *kiosk_seat = get_kiosk_shell_seat(seat);
