@@ -1,8 +1,9 @@
-From 494e88c9d23257fa5fdaedf427d156f07bc00e84 Mon Sep 17 00:00:00 2001
+From dff136cebc91b8675958167362cd627614f29d61 Mon Sep 17 00:00:00 2001
 From: Marius Vlad <marius.vlad@collabora.com>
 Date: Tue, 30 Mar 2021 15:51:53 +0300
-Forwarded: no
-Subject: [PATCH 4/5] kiosk-shell: Correctly de-activate surfaces when removed
+Forwarded: not-needed
+Subject: [PATCH 13/14] kiosk-shell: Correctly de-activate surfaces when
+ removed
 
 This is a small follow from 911716919, as it seems it missed
 the de-activation part and with that we need to take care of
@@ -18,7 +19,7 @@ Signed-off-by: Marius Vlad <marius.vlad@collabora.com>
  2 files changed, 35 insertions(+), 5 deletions(-)
 
 diff --git a/kiosk-shell/kiosk-shell.c b/kiosk-shell/kiosk-shell.c
-index 929a1071..442c9235 100644
+index 3214bcfb..1baca36e 100644
 --- a/kiosk-shell/kiosk-shell.c
 +++ b/kiosk-shell/kiosk-shell.c
 @@ -387,6 +387,7 @@ kiosk_shell_surface_create(struct kiosk_shell *shell,
@@ -29,7 +30,7 @@ index 929a1071..442c9235 100644
  
  	wl_signal_init(&shsurf->destroy_signal);
  
-@@ -677,6 +678,20 @@ find_focus_successor(struct weston_layer_entry *layer_entry,
+@@ -678,6 +679,20 @@ find_focus_successor(struct kiosk_shell_surface *shsurf)
  	return top_view;
  }
  
@@ -50,7 +51,7 @@ index 929a1071..442c9235 100644
  static void
  desktop_surface_removed(struct weston_desktop_surface *desktop_surface,
  			void *data)
-@@ -684,8 +699,6 @@ desktop_surface_removed(struct weston_desktop_surface *desktop_surface,
+@@ -685,8 +700,6 @@ desktop_surface_removed(struct weston_desktop_surface *desktop_surface,
  	struct kiosk_shell *shell = data;
  	struct kiosk_shell_surface *shsurf =
  		weston_desktop_surface_get_user_data(desktop_surface);
@@ -58,8 +59,8 @@ index 929a1071..442c9235 100644
 -		weston_desktop_surface_get_surface(desktop_surface);
  	struct weston_view *focus_view;
  	struct weston_seat *seat;
- 	struct weston_layer_entry *list_entry;
-@@ -698,12 +711,25 @@ desktop_surface_removed(struct weston_desktop_surface *desktop_surface,
+ 
+@@ -697,12 +710,25 @@ desktop_surface_removed(struct weston_desktop_surface *desktop_surface,
  
  	if (focus_view) {
  		wl_list_for_each(seat, &shell->compositor->seat_list, link) {
@@ -88,7 +89,7 @@ index 929a1071..442c9235 100644
  	kiosk_shell_surface_destroy(shsurf);
  }
  
-@@ -1249,6 +1275,7 @@ wet_shell_init(struct weston_compositor *ec,
+@@ -1248,6 +1274,7 @@ wet_shell_init(struct weston_compositor *ec,
  	config_file = weston_config_get_name_from_env();
  	shell->config = weston_config_parse(config_file);
  

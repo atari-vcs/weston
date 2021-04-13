@@ -1,8 +1,9 @@
-From cdf2845b01305a37f314ddcc011440c6caa54db3 Mon Sep 17 00:00:00 2001
+From 48c15d96871aabce5dae5691e3140be0793d1456 Mon Sep 17 00:00:00 2001
 From: Marius Vlad <marius.vlad@collabora.com>
 Date: Sat, 20 Mar 2021 17:58:20 +0200
-Subject: [PATCH 7/7] window-manager: Force xwayland surfaces be fullscreen if
- using kiosk-shell
+Forwarded: not-needed
+Subject: [PATCH 07/14] window-manager: Force xwayland surfaces be fullscreen
+ if using kiosk-shell
 
 kiosk-shell will by default make all windows/surfaces be fullscreen and
 with with that, they'll be placed into the normal_layer instead of
@@ -12,11 +13,23 @@ correctly displayed.
 This patch will force xwayland surfaces added in the normal_layer
 to be set as fullscreen, when using the kiosk-shell.
 
+Clients not setting _NET_WM_WINDOW_TYPE_NORMAL, indicating the top level
+functional type of the window would not be forced as fullscreen, as
+we're assuming that all clients would set that up.
+
+This re-works the forcing to fullscreen, to avoid any maximization
+entirely and to include (both) cases: if the window is already set as
+fullscreen we don't do anything (even if there's no type set). If the
+window is not fullscreen (no matter of what type has set) to force to
+go fullscreen. This way, we don't touch any application that is set as
+fullscreen (like Atari Vault), and applications not having any type set
+or set as normal to be forced as fullscreen.
+
 Signed-off-by: Marius Vlad <marius.vlad@collabora.com>
 ---
  xwayland/meson.build      |  2 +-
- xwayland/window-manager.c | 32 ++++++++++++++++++++++++++++++++
- 2 files changed, 33 insertions(+), 1 deletion(-)
+ xwayland/window-manager.c | 34 ++++++++++++++++++++++++++++++++++
+ 2 files changed, 35 insertions(+), 1 deletion(-)
 
 diff --git a/xwayland/meson.build b/xwayland/meson.build
 index 896d6314..547e11c7 100644
@@ -32,7 +45,7 @@ index 896d6314..547e11c7 100644
  foreach name : dep_names_xwayland
  	d = dependency(name, required: false)
 diff --git a/xwayland/window-manager.c b/xwayland/window-manager.c
-index de868218..1e6bdeb7 100644
+index de868218..04438175 100644
 --- a/xwayland/window-manager.c
 +++ b/xwayland/window-manager.c
 @@ -42,6 +42,7 @@
@@ -66,23 +79,25 @@ index de868218..1e6bdeb7 100644
  
  #define F(field) (&window->field)
  	const struct {
-@@ -645,6 +655,15 @@ weston_wm_window_read_properties(struct weston_wm_window *window)
+@@ -645,6 +655,17 @@ weston_wm_window_read_properties(struct weston_wm_window *window)
  		if (!window->machine || strcmp(window->machine, name))
  			window->pid = 0;
  	}
 +
 +	if (!strcmp(running_shell, "kiosk-shell") &&
-+	    window->type == wm->atom.net_wm_window_type_normal &&
-+	    !window->fullscreen) {
++	    (window->type == wm->atom.net_wm_window_type_normal ||
++	     window->type == 0) && !window->fullscreen) {
 +		window->fullscreen = 1;
 +		window->maximized_vert = 0;
 +		window->maximized_horz = 0;
 +		weston_wm_window_set_net_wm_state(window);
++		wm_printf(wm, "Note: Setting window to fullscreen (type %d)\n",
++				window->type);
 +	}
  }
  
  #undef TYPE_WM_PROTOCOLS
-@@ -1769,11 +1788,24 @@ weston_wm_window_handle_state(struct weston_wm_window *window,
+@@ -1769,11 +1790,24 @@ weston_wm_window_handle_state(struct weston_wm_window *window,
  		wm->server->compositor->xwayland_interface;
  	uint32_t action, property1, property2;
  	int maximized = weston_wm_window_is_maximized(window);
@@ -97,12 +112,12 @@ index de868218..1e6bdeb7 100644
  	property2 = client_message->data.data32[2];
  
 +        if (!strcmp(running_shell, "kiosk-shell") &&
-+	    window->type == wm->atom.net_wm_window_type_normal) {
++	     window->type == wm->atom.net_wm_window_type_normal) {
 +                property1 = wm->atom.net_wm_state_fullscreen;
 +                property2 = wm->atom.net_wm_state_fullscreen;
 +                action = _NET_WM_STATE_ADD;
 +                wm_printf(wm, "XWM: Note: Replacing client message with fullscreen state addition\n");
-+        }
++	}
 +
  	if ((property1 == wm->atom.net_wm_state_fullscreen ||
  	     property2 == wm->atom.net_wm_state_fullscreen) &&
