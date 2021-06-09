@@ -12,3 +12,4 @@ atari/0002-kiosk-shell-Give-keyboard-focus-when-mapping-the-sur.patch
 atari/0003-kiosk-shell-Embed-keyboard-focus-activation-code.patch
 atari/0004-kiosk-shell-Correctly-de-activate-surfaces-when-remo.patch
 atari/0005-kiosk-shell-Avoid-input-focus-and-xdg-shell-activati.patch
+atari/0001-kiosk-shell-Key-bindings-to-switch-between-normal_la.patch

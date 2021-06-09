@@ -1,3 +1,12 @@
+weston (9.0.0-4~exp1ata15) vcs; urgency=medium
+
+  * Added key-bindings for switching between apps and discord. Uses
+  + MOD_SUPER+Tab or MOD_SUPER+1 and MOD_SUPER+2 to achieve the same thing.
+  + debian/patches/atari/0001-kiosk-shell-Key-bindings-to-switch-between-normal_la.patch
+  + added.
+
+ -- Marius Vlad <marius.vlad@collabora.com>  Tue, 08 Jun 2021 11:25:46 +0300
+
 weston (9.0.0-4~exp1ata14) vcs; urgency=medium
 
   * Fix focus given to the wrong app when switching between layers

@@ -1,0 +1,218 @@
+From a2c7079bec91741ad43c6933a6717ff8fe731342 Mon Sep 17 00:00:00 2001
+From: Marius Vlad <marius.vlad@collabora.com>
+Date: Tue, 8 Jun 2021 11:18:55 +0300
+Forwarded: not-needed
+Subject: [PATCH] kiosk-shell: Key-bindings to switch between
+ normal_layer/bundles_layer and a hidden one
+
+With it, this adds support as to implement a rudimentary application
+switching between the apps layer (normal layer as we call it, were the
+regular applications are inserted) and a bundles layer (which was not
+used so far).
+
+The surface/view is (intermediary) added/removed in a hidden layer that
+is never displayed.
+
+MOD_SUPER+1 - displays the top most (head) of the applications
+MOD_SUPER+2 - displays what is in the bundle layer (Discord in our case)
+
+MOD_SUPER+Tab - alternates between the two
+
+Signed-off-by: Marius Vlad <marius.vlad@collabora.com>
+---
+ kiosk-shell/kiosk-shell.c | 120 ++++++++++++++++++++++++++++++++++++++
+ kiosk-shell/kiosk-shell.h |   2 +
+ 2 files changed, 122 insertions(+)
+
+diff --git a/kiosk-shell/kiosk-shell.c b/kiosk-shell/kiosk-shell.c
+index cfc454dc..81638680 100644
+--- a/kiosk-shell/kiosk-shell.c
++++ b/kiosk-shell/kiosk-shell.c
+@@ -45,6 +45,7 @@
+ #define ATARI_AUTHORIZED_DASHBOARD_PATH 	"/usr/local/dashboard/Dashboard"
+ #define ATARI_AUTHORIZED_INGAMEMENU_PATH 	"/usr/local/dashboard/InGameMenu"
+ #define ATARI_AUTHORIZED_NOTIFICATION_PATH 	"/usr/local/dashboard/notify"
++#define ATARI_AUTHORIZED_DISCORD_PATH		"/home/games/MEIsu5GFTvy55EUB/Discord"
+ 
+ static struct kiosk_shell_surface *
+ get_kiosk_shell_surface(struct weston_surface *surface)
+@@ -738,6 +739,9 @@ kiosk_shell_get_layer_by_app_path(const char *path, struct kiosk_shell *shell)
+ 	if (strcmp(path, ATARI_AUTHORIZED_DASHBOARD_PATH) == 0)
+ 		return &shell->normal_layer.view_list;
+ 
++	if (strcmp(path, ATARI_AUTHORIZED_DISCORD_PATH) == 0)
++		return &shell->bundles_layer.view_list;
++
+ 	if (strcmp(path, ATARI_AUTHORIZED_INGAMEMENU_PATH) == 0)
+ 		return &shell->menu_layer.view_list;
+ 
+@@ -1145,6 +1149,108 @@ atari_menu_binding(struct weston_keyboard *keyboard, const struct timespec *time
+ 	weston_watch_process(proc);
+ }
+ 
++static void
++switcher_activate_keyboard_focus(struct kiosk_shell *shell, struct weston_view *ev)
++{
++	struct weston_seat *seat;
++
++	wl_list_for_each(seat, &shell->compositor->seat_list, link) {
++		struct kiosk_shell_seat *kiosk_seat = get_kiosk_shell_seat(seat);
++
++		weston_view_activate(ev, seat, 0);
++
++		if (kiosk_seat->focused_surface) {
++			struct kiosk_shell_surface *current_focus =
++				get_kiosk_shell_surface(kiosk_seat->focused_surface);
++			if (current_focus) {
++				kiosk_shell_surface_deactivate(current_focus);
++			}
++		}
++
++		kiosk_seat->focused_surface = ev->surface;
++
++		if (kiosk_seat->focused_surface) {
++			struct kiosk_shell_surface *shsurf =
++				get_kiosk_shell_surface(ev->surface);
++			if (shsurf) {
++				kiosk_shell_surface_activate(shsurf);
++			}
++		}
++	}
++}
++
++static void
++switcher_apps(struct weston_keyboard *keyboard, const struct timespec *time,
++		 uint32_t key, void *data)
++{
++	struct kiosk_shell *shell = data;
++	struct weston_layer_entry *bundle_layer_list;
++	struct weston_layer_entry *hidden_layer_list;
++	struct weston_layer_entry *normal_view_layer_list;
++
++	struct weston_view *ev = NULL;
++	struct weston_view *head_ev = NULL;
++
++	bundle_layer_list = &shell->bundles_layer.view_list;
++	hidden_layer_list = &shell->hidden_layer.view_list;
++	normal_view_layer_list = &shell->normal_layer.view_list;
++
++	if (wl_list_empty(bundle_layer_list->link.next))
++		return;
++
++	ev = container_of(bundle_layer_list->link.prev,
++			  struct weston_view, layer_link.link);
++
++	weston_layer_entry_remove(&ev->layer_link);
++	weston_layer_entry_insert(hidden_layer_list, &ev->layer_link);
++
++	head_ev = container_of(normal_view_layer_list->link.next,
++			      struct weston_view, layer_link.link);
++	switcher_activate_keyboard_focus(shell, head_ev);
++
++	weston_view_damage_below(ev);
++}
++
++static void
++switcher_bundles(struct weston_keyboard *keyboard, const struct timespec *time,
++		 uint32_t key, void *data)
++{
++
++	struct kiosk_shell *shell = data;
++	struct weston_layer_entry *bundle_layer_list;
++	struct weston_layer_entry *hidden_layer_list;
++	struct weston_view *ev = NULL;
++
++	bundle_layer_list = &shell->bundles_layer.view_list;
++	hidden_layer_list = &shell->hidden_layer.view_list;
++
++	if (wl_list_empty(hidden_layer_list->link.next))
++		return;
++
++	ev = container_of(hidden_layer_list->link.prev,
++			  struct weston_view, layer_link.link);
++
++	weston_layer_entry_remove(&ev->layer_link);
++	weston_layer_entry_insert(bundle_layer_list, &ev->layer_link);
++
++	switcher_activate_keyboard_focus(shell, ev);
++	weston_view_damage_below(ev);
++}
++
++static void
++switcher_apps_bundles(struct weston_keyboard *keyboard, const struct timespec *time,
++		      uint32_t key, void *data)
++{
++	struct kiosk_shell *shell = data;
++
++	if (!shell->switched_state) {
++		switcher_bundles(keyboard, time, key, data);
++		shell->switched_state = true;
++	} else {
++		switcher_apps(keyboard, time, key, data);
++		shell->switched_state = false;
++	}
++}
+ 
+ static void
+ kiosk_shell_add_bindings(struct kiosk_shell *shell)
+@@ -1161,6 +1267,15 @@ kiosk_shell_add_bindings(struct kiosk_shell *shell)
+ 	/* Atari VCS: keybinding to bring-up menu */
+ 	weston_compositor_add_key_binding(shell->compositor, KEY_ESC,
+ 			MODIFIER_CTRL, atari_menu_binding, shell->compositor);
++
++	weston_compositor_add_key_binding(shell->compositor, KEY_TAB, MODIFIER_SUPER,
++			switcher_apps_bundles, shell);
++
++	weston_compositor_add_key_binding(shell->compositor, KEY_1, MODIFIER_SUPER,
++			switcher_apps, shell);
++
++	weston_compositor_add_key_binding(shell->compositor, KEY_2, MODIFIER_SUPER,
++			switcher_bundles, shell);
+ }
+ 
+ static void
+@@ -1283,11 +1398,15 @@ wet_shell_init(struct weston_compositor *ec,
+ 	wl_list_init(&shell->shsurfs);
+ 	weston_layer_init(&shell->background_layer, ec);
+ 	weston_layer_init(&shell->normal_layer, ec);
++	weston_layer_init(&shell->hidden_layer, ec);
+ 
+ 	weston_layer_init(&shell->bundles_layer, ec);
+ 	weston_layer_init(&shell->menu_layer, ec);
+ 	weston_layer_init(&shell->popup_layer, ec);
+ 
++	weston_layer_set_position(&shell->hidden_layer,
++				  WESTON_LAYER_POSITION_HIDDEN);
++
+ 	weston_layer_set_position(&shell->background_layer,
+ 				  WESTON_LAYER_POSITION_BACKGROUND);
+ 	/* We use the NORMAL layer position, so that xwayland surfaces, which
+@@ -1334,5 +1453,6 @@ wet_shell_init(struct weston_compositor *ec,
+ 
+ 	kiosk_shell_add_bindings(shell);
+ 
++
+ 	return 0;
+ }
+diff --git a/kiosk-shell/kiosk-shell.h b/kiosk-shell/kiosk-shell.h
+index 4ccf84c2..c5df2a6c 100644
+--- a/kiosk-shell/kiosk-shell.h
++++ b/kiosk-shell/kiosk-shell.h
+@@ -44,12 +44,14 @@ struct kiosk_shell {
+ 	struct weston_layer bundles_layer;
+ 	struct weston_layer menu_layer;
+ 	struct weston_layer popup_layer;
++	struct weston_layer hidden_layer;
+ 
+ 	struct wl_list output_list;
+ 	const struct weston_xwayland_surface_api *xwayland_surface_api;
+ 	struct weston_config *config;
+ 
+ 	struct wl_list shsurfs;
++	bool switched_state;
+ };
+ 
+ struct kiosk_shell_surface {
+-- 
+2.29.2
+
