@@ -1,0 +1,33 @@
+From: Christopher Obbard <chris.obbard@collabora.com>
+Date: Tue, 12 Oct 2021 15:44:17 +0100
+Subject: [HACK] xwayland: Do not resize Google Chrome windows
+
+Forwarded: not-needed
+
+Allow Google Chrome windows to be rendered as 4k and not be upscaled by
+xwayland.
+
+Signed-off-by: Christopher Obbard <chris.obbard@collabora.com>
+---
+ xwayland/window-manager.c | 8 ++++++++
+ 1 file changed, 8 insertions(+)
+
+diff --git a/xwayland/window-manager.c b/xwayland/window-manager.c
+index 111f0c4..2902ff6 100644
+--- a/xwayland/window-manager.c
++++ b/xwayland/window-manager.c
+@@ -723,6 +723,14 @@ limit_window_size(struct weston_wm_window *window,
+ 			window->class,
+ 			window->width,
+ 			window->height);
++
++		if (window->class) {
++			/* Allow Google Chrome windows to be full-size */
++			if (strcmp(window->class, "google-chrome") == 0) {
++				wm_printf(window->wm, "XWM: limit_window_size detected Google Chrome; not resizing window\n");
++				return false;
++			}
++		}
+ 	}
+ 
+ 	if (*width > MAX_SCALED_WIDTH)
