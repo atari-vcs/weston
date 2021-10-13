@@ -1,3 +1,12 @@
+weston (9.0.0-4~exp1ata16) vcs; urgency=medium
+
+  * d/p/atari/0001-xwayland-limit-window-1080p.patch
+    + Added.
+  * d/p/atari/0002-xwayland-do-not-resize-google-chrome-windows.patch
+    + Added.
+
+ -- Christopher Obbard <chris.obbard@collabora.com>  Tue, 12 Oct 2021 15:53:07 +0100
+
 weston (9.0.0-4~exp1ata15) vcs; urgency=medium
 
   * Added key-bindings for switching between apps and discord. Uses
