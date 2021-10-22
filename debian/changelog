@@ -1,3 +1,10 @@
+weston (9.0.0-4~exp1ata17) vcs; urgency=medium
+
+  * d/p/atari/0003-gl-renderer-take-into-account-viewport-choosing-filtering.patch
+    + Added.
+
+ -- Christopher Obbard <chris.obbard@collabora.com>  Fri, 22 Oct 2021 17:29:09 +0100
+
 weston (9.0.0-4~exp1ata16) vcs; urgency=medium
 
   * d/p/atari/0001-xwayland-limit-window-1080p.patch
