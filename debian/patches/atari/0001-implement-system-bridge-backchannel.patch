@@ -1,0 +1,270 @@
+From: Christopher Obbard <chris.obbard@collabora.com>
+Date: Wed, 17 Nov 2021 11:48:44 +0000
+Subject: [HACK] Implement system-bridge backchannel
+
+Allow the system-bridge daemon to connect to the compositor
+over D-Bus as a well-known name. The following functions are
+also implemented over the bus:
+
+ - Notification when active layer changes
+ - Method to toggle active layer
+
+Signed-off-by: Christopher Obbard <chris.obbard@collabora.com>
+Forwarded: not-needed
+---
+ kiosk-shell/kiosk-shell.c | 128 +++++++++++++++++++++++++++++++++++++++++++++-
+ kiosk-shell/kiosk-shell.h |   4 ++
+ kiosk-shell/meson.build   |   2 +
+ 3 files changed, 132 insertions(+), 2 deletions(-)
+
+diff --git a/kiosk-shell/kiosk-shell.c b/kiosk-shell/kiosk-shell.c
+index 87898cb..6480339 100644
+--- a/kiosk-shell/kiosk-shell.c
++++ b/kiosk-shell/kiosk-shell.c
+@@ -33,6 +33,8 @@
+ #include <string.h>
+ #include <errno.h>
+ #include <unistd.h>
++#include <unistd.h>
++#include <dbus/dbus.h>
+ 
+ #include "kiosk-shell.h"
+ #include "kiosk-shell-grab.h"
+@@ -41,6 +43,7 @@
+ #include "util.h"
+ 
+ #include <libweston/xwayland-api.h>
++#include <libweston/dbus.h>
+ 
+ #define ATARI_AUTHORIZED_DASHBOARD_PATH 	"/usr/local/dashboard/Dashboard"
+ #define ATARI_AUTHORIZED_INGAMEMENU_PATH 	"/usr/local/dashboard/InGameMenu"
+@@ -65,6 +68,10 @@ kiosk_shell_seat_handle_destroy(struct wl_listener *listener, void *data);
+ static struct weston_layer_entry *
+ kiosk_shell_verify_apps(struct kiosk_shell_surface *shsurf);
+ 
++static void
++switcher_apps_bundles(struct weston_keyboard *keyboard, const struct timespec *time,
++		      uint32_t key, void *data);
++
+ static struct kiosk_shell_seat *
+ get_kiosk_shell_seat(struct weston_seat *seat)
+ {
+@@ -114,6 +121,106 @@ err:
+        return NULL;
+ }
+ 
++static DBusHandlerResult
++atari_bridge_dbus_handle_message(DBusConnection *c, DBusMessage *m, void *data);
++
++static struct DBusObjectPathVTable atari_bridge_dbus_vtable = {
++	NULL, atari_bridge_dbus_handle_message, NULL, NULL, NULL, NULL
++};
++
++static DBusHandlerResult
++atari_bridge_dbus_handle_toggle_foreground_layer(DBusConnection *c, DBusMessage *m, void *data)
++{
++	DBusMessage *reply;
++
++	/* Toggle the foreground layer */
++	weston_log("atari_bridge_dbus_handle_toggle_foreground_layer\n");
++	switcher_apps_bundles(NULL, NULL, NULL, data);
++
++	reply = dbus_message_new_method_return(m);
++	if (reply) {
++		dbus_connection_send(c, reply, NULL);
++		dbus_message_unref(reply);
++	}
++
++	return DBUS_HANDLER_RESULT_HANDLED;
++}
++
++static DBusHandlerResult
++atari_bridge_dbus_handle_message(DBusConnection *c, DBusMessage *m, void *data)
++{
++	if (dbus_message_is_method_call(m, "com.atarivcs.Compositor", "ToggleLayer"))
++		return atari_bridge_dbus_handle_toggle_foreground_layer(c, m, data);
++
++	return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
++}
++
++static int
++atari_bridge_dbus_setup(struct kiosk_shell *shell)
++{
++	struct wl_event_loop *loop;
++	int r;
++	DBusError err;
++	bool b;
++
++	weston_log("atari_bridge: opening connection to bridge\n");
++	loop = wl_display_get_event_loop(shell->compositor->wl_display);
++
++	/* connect to the session bus */
++	r = weston_dbus_open(loop, DBUS_BUS_SESSION, &shell->bridge_dbus, &shell->bridge_dbus_ctx);
++	if (r < 0) {
++		weston_log("atari_bridge: cannot connect to the session bus\n");
++		return r;
++	}
++
++	/* register the object before requesting the well-known name */
++	b = dbus_connection_register_object_path(shell->bridge_dbus,
++					 "/com/atarivcs/Compositor", &atari_bridge_dbus_vtable, shell);
++	if (!b) {
++		weston_log("atari_bridge: cannot register dbus object\n");
++		return -ENOMEM;
++	}
++
++	/* request the well-known name */
++	dbus_error_init(&err);
++	r = dbus_bus_request_name(shell->bridge_dbus, "com.atarivcs.Compositor",
++					 DBUS_NAME_FLAG_REPLACE_EXISTING, &err);
++	if (dbus_error_is_set(&err)) {
++		weston_log("atari_bridge: cannot request well-known name\n");
++		dbus_error_free(&err);
++		return r;
++	}
++
++	return 0;
++}
++
++static void
++atari_bridge_dbus_notify_layer_change(struct kiosk_shell *shell,
++			       const char *layer)
++{
++	DBusMessage *m;
++	bool b;
++
++	m = dbus_message_new_signal("/com/atarivcs/Compositor",
++							    "com.atarivcs.Compositor",
++							    "LayerChange");
++	if (m) {
++		b = dbus_message_append_args(m,
++					     DBUS_TYPE_STRING, &layer,
++					     DBUS_TYPE_INVALID);
++		if (b)
++			dbus_connection_send(shell->bridge_dbus, m, NULL);
++		dbus_message_unref(m);
++	}
++}
++
++static void
++atari_bridge_close(struct kiosk_shell *shell)
++{
++	weston_log("atari: closing connection to bridge\n");
++	weston_dbus_close(shell->bridge_dbus, shell->bridge_dbus_ctx);
++}
++
+ /*
+  * kiosk_shell_surface
+  */
+@@ -793,6 +900,7 @@ desktop_surface_committed(struct weston_desktop_surface *desktop_surface,
+ 		weston_desktop_surface_get_user_data(desktop_surface);
+ 	struct weston_surface *surface =
+ 		weston_desktop_surface_get_surface(desktop_surface);
++	struct kiosk_shell *shell = data;
+ 	bool is_resized;
+ 	bool is_fullscreen;
+ 
+@@ -857,6 +965,12 @@ desktop_surface_committed(struct weston_desktop_surface *desktop_surface,
+ 					if (shsurf)
+ 						kiosk_shell_surface_activate(shsurf);
+ 				}
++
++				if (!shell->switched_state && layer_list == &shsurf->shell->bundles_layer.view_list) {
++					shell->switched_state = true;
++					weston_log("switch background-bundle layer to foreground\n");
++					atari_bridge_dbus_notify_layer_change(shell, "background-bundle");
++				}
+ 			}
+ 		}
+ 	}
+@@ -1209,6 +1323,10 @@ switcher_apps(struct weston_keyboard *keyboard, const struct timespec *time,
+ 	switcher_activate_keyboard_focus(shell, head_ev);
+ 
+ 	weston_view_damage_below(ev);
++
++	shell->switched_state = false;
++	weston_log("switched bundle layer to foreground\n");
++	atari_bridge_dbus_notify_layer_change(shell, "bundle");
+ }
+ 
+ static void
+@@ -1235,6 +1353,10 @@ switcher_bundles(struct weston_keyboard *keyboard, const struct timespec *time,
+ 
+ 	switcher_activate_keyboard_focus(shell, ev);
+ 	weston_view_damage_below(ev);
++
++	shell->switched_state = true;
++	weston_log("switch background-bundle layer to foreground\n");
++	atari_bridge_dbus_notify_layer_change(shell, "background-bundle");
+ }
+ 
+ static void
+@@ -1245,10 +1367,8 @@ switcher_apps_bundles(struct weston_keyboard *keyboard, const struct timespec *t
+ 
+ 	if (!shell->switched_state) {
+ 		switcher_bundles(keyboard, time, key, data);
+-		shell->switched_state = true;
+ 	} else {
+ 		switcher_apps(keyboard, time, key, data);
+-		shell->switched_state = false;
+ 	}
+ }
+ 
+@@ -1355,6 +1475,8 @@ kiosk_shell_destroy(struct wl_listener *listener, void *data)
+ 		container_of(listener, struct kiosk_shell, destroy_listener);
+ 	struct kiosk_shell_output *shoutput, *tmp;
+ 
++	atari_bridge_close(shell);
++
+ 	wl_list_remove(&shell->destroy_listener.link);
+ 	wl_list_remove(&shell->output_created_listener.link);
+ 	wl_list_remove(&shell->output_resized_listener.link);
+@@ -1451,6 +1573,8 @@ wet_shell_init(struct weston_compositor *ec,
+ 
+ 	screenshooter_create(ec);
+ 
++	atari_bridge_dbus_setup(shell);
++
+ 	kiosk_shell_add_bindings(shell);
+ 
+ 
+diff --git a/kiosk-shell/kiosk-shell.h b/kiosk-shell/kiosk-shell.h
+index c5df2a6..74acd95 100644
+--- a/kiosk-shell/kiosk-shell.h
++++ b/kiosk-shell/kiosk-shell.h
+@@ -27,6 +27,7 @@
+ #include <libweston-desktop/libweston-desktop.h>
+ #include <libweston/libweston.h>
+ #include <libweston/config-parser.h>
++#include <libweston/dbus.h>
+ 
+ struct kiosk_shell {
+ 	struct weston_compositor *compositor;
+@@ -52,6 +53,9 @@ struct kiosk_shell {
+ 
+ 	struct wl_list shsurfs;
+ 	bool switched_state;
++
++	DBusConnection *bridge_dbus;
++	struct wl_event_source *bridge_dbus_ctx;
+ };
+ 
+ struct kiosk_shell_surface {
+diff --git a/kiosk-shell/meson.build b/kiosk-shell/meson.build
+index e838614..ee3357e 100644
+--- a/kiosk-shell/meson.build
++++ b/kiosk-shell/meson.build
+@@ -9,11 +9,13 @@ if get_option('shell-kiosk')
+ 		input_method_unstable_v1_protocol_c,
+ 	]
+ 	deps_shell_kiosk = [
++		dbus_dep,
+ 		dep_libm,
+ 		dep_libexec_weston,
+ 		dep_libshared,
+ 		dep_lib_desktop,
+ 		dep_libweston_public,
++		dep_session_helper,
+ 	]
+ 	plugin_shell_kiosk = shared_library(
+ 		'kiosk-shell',
