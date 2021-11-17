@@ -1,3 +1,13 @@
+weston (9.0.0-4~exp1ata18) vcs; urgency=medium
+
+  * Implement system-bridge backchannel
+   - d/p/libweston-Move-dbus-helper-from-internal-to-public.patch
+    + Added.
+   - d/p/atari/0001-implement-system-bridge-backchannel.patch
+    + Added.
+
+ -- Christopher Obbard <chris.obbard@collabora.com>  Wed, 17 Nov 2021 12:03:52 +0000
+
 weston (9.0.0-4~exp1ata17) vcs; urgency=medium
 
   * d/p/atari/0003-gl-renderer-take-into-account-viewport-choosing-filtering.patch
