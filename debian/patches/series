@@ -16,3 +16,5 @@ atari/0001-kiosk-shell-Key-bindings-to-switch-between-normal_la.patch
 atari/0001-xwayland-limit-window-1080p.patch
 atari/0002-xwayland-do-not-resize-google-chrome-windows.patch
 atari/0003-gl-renderer-take-into-account-viewport-choosing-filtering.patch
+libweston-Move-dbus-helper-from-internal-to-public.patch
+atari/0001-implement-system-bridge-backchannel.patch

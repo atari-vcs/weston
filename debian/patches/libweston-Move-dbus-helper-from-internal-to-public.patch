@@ -1,0 +1,278 @@
+From: Christopher Obbard <chris.obbard@collabora.com>
+Date: Wed, 17 Nov 2021 11:46:53 +0000
+Subject: libweston: Move dbus helper from internal to public
+
+Currently the dbus helper stuff is internal only in libweston,
+let's move it to being public so that custom shells may use
+the helper code.
+
+Signed-off-by: Christopher Obbard <chris.obbard@collabora.com>
+Forwarded: https://gitlab.freedesktop.org/wayland/weston/-/merge_requests/728
+---
+ include/libweston/dbus.h    | 110 ++++++++++++++++++++++++++++++++++++++++++++
+ libweston/dbus.c            |   2 +-
+ libweston/dbus.h            | 110 --------------------------------------------
+ libweston/launcher-logind.c |   2 +-
+ 4 files changed, 112 insertions(+), 112 deletions(-)
+ create mode 100644 include/libweston/dbus.h
+ delete mode 100644 libweston/dbus.h
+
+diff --git a/include/libweston/dbus.h b/include/libweston/dbus.h
+new file mode 100644
+index 0000000..639946c
+--- /dev/null
++++ b/include/libweston/dbus.h
+@@ -0,0 +1,110 @@
++/*
++ * Copyright © 2013 David Herrmann <dh.herrmann@gmail.com>
++ *
++ * Permission is hereby granted, free of charge, to any person obtaining
++ * a copy of this software and associated documentation files (the
++ * "Software"), to deal in the Software without restriction, including
++ * without limitation the rights to use, copy, modify, merge, publish,
++ * distribute, sublicense, and/or sell copies of the Software, and to
++ * permit persons to whom the Software is furnished to do so, subject to
++ * the following conditions:
++ *
++ * The above copyright notice and this permission notice (including the
++ * next paragraph) shall be included in all copies or substantial
++ * portions of the Software.
++ *
++ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
++ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
++ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
++ * NONINFRINGEMENT.  IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
++ * BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
++ * ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
++ * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
++ * SOFTWARE.
++ */
++
++#ifndef _WESTON_DBUS_H_
++#define _WESTON_DBUS_H_
++
++#include "config.h"
++
++#include <errno.h>
++#include <wayland-server.h>
++
++#include <libweston/libweston.h>
++
++#ifdef HAVE_DBUS
++
++#include <dbus/dbus.h>
++
++/*
++ * weston_dbus_open() - Open new dbus connection
++ *
++ * Opens a new dbus connection to the bus given as @bus. It automatically
++ * integrates the new connection into the main-loop @loop. The connection
++ * itself is returned in @out.
++ * This also returns a context source used for dbus dispatching. It is
++ * returned on success in @ctx_out and must be passed to weston_dbus_close()
++ * unchanged. You must not access it from outside of a dbus helper!
++ *
++ * Returns 0 on success, negative error code on failure.
++ */
++int weston_dbus_open(struct wl_event_loop *loop, DBusBusType bus,
++		     DBusConnection **out, struct wl_event_source **ctx_out);
++
++/*
++ * weston_dbus_close() - Close dbus connection
++ *
++ * Closes a dbus connection that was previously opened via weston_dbus_open().
++ * It unbinds the connection from the main-loop it was previously bound to,
++ * closes the dbus connection and frees all resources. If you want to access
++ * @c after this call returns, you must hold a dbus-reference to it. But
++ * notice that the connection is closed after this returns so it cannot be
++ * used to spawn new dbus requests.
++ * You must pass the context source returns by weston_dbus_open() as @ctx.
++ */
++void weston_dbus_close(DBusConnection *c, struct wl_event_source *ctx);
++
++/*
++ * weston_dbus_add_match() - Add dbus match
++ *
++ * Configure a dbus-match on the given dbus-connection. This match is saved
++ * on the dbus-server as long as the connection is open. See dbus-manual
++ * for information. Compared to the dbus_bus_add_match() this allows a
++ * var-arg formatted match-string.
++ */
++int weston_dbus_add_match(DBusConnection *c, const char *format, ...);
++
++/*
++ * weston_dbus_add_match_signal() - Add dbus signal match
++ *
++ * Same as weston_dbus_add_match() but does the dbus-match formatting for
++ * signals internally.
++ */
++int weston_dbus_add_match_signal(DBusConnection *c, const char *sender,
++				 const char *iface, const char *member,
++				 const char *path);
++
++/*
++ * weston_dbus_remove_match() - Remove dbus match
++ *
++ * Remove a previously configured dbus-match from the dbus server. There is
++ * no need to remove dbus-matches if you close the connection, anyway.
++ * Compared to dbus_bus_remove_match() this allows a var-arg formatted
++ * match string.
++ */
++void weston_dbus_remove_match(DBusConnection *c, const char *format, ...);
++
++/*
++ * weston_dbus_remove_match_signal() - Remove dbus signal match
++ *
++ * Same as weston_dbus_remove_match() but does the dbus-match formatting for
++ * signals internally.
++ */
++void weston_dbus_remove_match_signal(DBusConnection *c, const char *sender,
++				     const char *iface, const char *member,
++				     const char *path);
++
++#endif /* HAVE_DBUS */
++
++#endif // _WESTON_DBUS_H_
+diff --git a/libweston/dbus.c b/libweston/dbus.c
+index 91f2be7..a343c08 100644
+--- a/libweston/dbus.c
++++ b/libweston/dbus.c
+@@ -45,7 +45,7 @@
+ #include <wayland-server.h>
+ 
+ #include <libweston/libweston.h>
+-#include "dbus.h"
++#include <libweston/dbus.h>
+ 
+ /*
+  * DBus Mainloop Integration
+diff --git a/libweston/dbus.h b/libweston/dbus.h
+deleted file mode 100644
+index 639946c..0000000
+--- a/libweston/dbus.h
++++ /dev/null
+@@ -1,110 +0,0 @@
+-/*
+- * Copyright © 2013 David Herrmann <dh.herrmann@gmail.com>
+- *
+- * Permission is hereby granted, free of charge, to any person obtaining
+- * a copy of this software and associated documentation files (the
+- * "Software"), to deal in the Software without restriction, including
+- * without limitation the rights to use, copy, modify, merge, publish,
+- * distribute, sublicense, and/or sell copies of the Software, and to
+- * permit persons to whom the Software is furnished to do so, subject to
+- * the following conditions:
+- *
+- * The above copyright notice and this permission notice (including the
+- * next paragraph) shall be included in all copies or substantial
+- * portions of the Software.
+- *
+- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+- * NONINFRINGEMENT.  IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
+- * BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+- * ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+- * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+- * SOFTWARE.
+- */
+-
+-#ifndef _WESTON_DBUS_H_
+-#define _WESTON_DBUS_H_
+-
+-#include "config.h"
+-
+-#include <errno.h>
+-#include <wayland-server.h>
+-
+-#include <libweston/libweston.h>
+-
+-#ifdef HAVE_DBUS
+-
+-#include <dbus/dbus.h>
+-
+-/*
+- * weston_dbus_open() - Open new dbus connection
+- *
+- * Opens a new dbus connection to the bus given as @bus. It automatically
+- * integrates the new connection into the main-loop @loop. The connection
+- * itself is returned in @out.
+- * This also returns a context source used for dbus dispatching. It is
+- * returned on success in @ctx_out and must be passed to weston_dbus_close()
+- * unchanged. You must not access it from outside of a dbus helper!
+- *
+- * Returns 0 on success, negative error code on failure.
+- */
+-int weston_dbus_open(struct wl_event_loop *loop, DBusBusType bus,
+-		     DBusConnection **out, struct wl_event_source **ctx_out);
+-
+-/*
+- * weston_dbus_close() - Close dbus connection
+- *
+- * Closes a dbus connection that was previously opened via weston_dbus_open().
+- * It unbinds the connection from the main-loop it was previously bound to,
+- * closes the dbus connection and frees all resources. If you want to access
+- * @c after this call returns, you must hold a dbus-reference to it. But
+- * notice that the connection is closed after this returns so it cannot be
+- * used to spawn new dbus requests.
+- * You must pass the context source returns by weston_dbus_open() as @ctx.
+- */
+-void weston_dbus_close(DBusConnection *c, struct wl_event_source *ctx);
+-
+-/*
+- * weston_dbus_add_match() - Add dbus match
+- *
+- * Configure a dbus-match on the given dbus-connection. This match is saved
+- * on the dbus-server as long as the connection is open. See dbus-manual
+- * for information. Compared to the dbus_bus_add_match() this allows a
+- * var-arg formatted match-string.
+- */
+-int weston_dbus_add_match(DBusConnection *c, const char *format, ...);
+-
+-/*
+- * weston_dbus_add_match_signal() - Add dbus signal match
+- *
+- * Same as weston_dbus_add_match() but does the dbus-match formatting for
+- * signals internally.
+- */
+-int weston_dbus_add_match_signal(DBusConnection *c, const char *sender,
+-				 const char *iface, const char *member,
+-				 const char *path);
+-
+-/*
+- * weston_dbus_remove_match() - Remove dbus match
+- *
+- * Remove a previously configured dbus-match from the dbus server. There is
+- * no need to remove dbus-matches if you close the connection, anyway.
+- * Compared to dbus_bus_remove_match() this allows a var-arg formatted
+- * match string.
+- */
+-void weston_dbus_remove_match(DBusConnection *c, const char *format, ...);
+-
+-/*
+- * weston_dbus_remove_match_signal() - Remove dbus signal match
+- *
+- * Same as weston_dbus_remove_match() but does the dbus-match formatting for
+- * signals internally.
+- */
+-void weston_dbus_remove_match_signal(DBusConnection *c, const char *sender,
+-				     const char *iface, const char *member,
+-				     const char *path);
+-
+-#endif /* HAVE_DBUS */
+-
+-#endif // _WESTON_DBUS_H_
+diff --git a/libweston/launcher-logind.c b/libweston/launcher-logind.c
+index 7c2b065..1898607 100644
+--- a/libweston/launcher-logind.c
++++ b/libweston/launcher-logind.c
+@@ -39,8 +39,8 @@
+ #include <unistd.h>
+ 
+ #include <libweston/libweston.h>
++#include <libweston/dbus.h>
+ #include "backend.h"
+-#include "dbus.h"
+ #include "launcher-impl.h"
+ 
+ #define DRM_MAJOR 226
